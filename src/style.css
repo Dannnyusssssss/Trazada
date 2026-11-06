@@ -2,7 +2,7 @@
 
 :root {
   --panel: rgba(12, 16, 28, 0.86);
-  --panel-soft: rgba(12, 16, 28, 0.72);
+  --panel-soft: rgba(12, 16, 28, 0.84);
   --text: #f5f3ee;
   --text-dim: #d3d7e2;
   --accent: #ffb547;
@@ -344,8 +344,8 @@ summary:focus-visible {
 
 .debug-overlay {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  right: 12px;
+  top: 110px;
   max-height: 70vh;
   overflow: auto;
   width: 280px;
@@ -375,4 +375,159 @@ summary:focus-visible {
 
 .debug-param input {
   width: 90px;
+}
+
+/* Selección de circuito y coche */
+
+.select-screen {
+  max-width: min(980px, 100%);
+}
+
+.select-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.choice-group,
+.radio-row {
+  border: 1px solid #3a4360;
+  border-radius: 8px;
+  padding: 8px 12px 12px;
+  margin: 0;
+}
+
+.choice-group legend,
+.radio-row legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(255, 181, 71, 0.08);
+}
+
+.choice:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.choice input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.choice-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.choice-info {
+  font-weight: 600;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat {
+  white-space: nowrap;
+}
+
+.radio-row {
+  margin: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+}
+
+.radio-row .hint {
+  flex-basis: 100%;
+}
+
+.radio {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.radio input {
+  accent-color: var(--accent);
+}
+
+/* Resultados */
+
+.results-screen {
+  min-width: min(420px, 100%);
+}
+
+.results-list {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px 18px;
+  margin: 0 0 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.results-list dt {
+  color: var(--text-dim);
+}
+
+.results-list dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.lap-list {
+  margin: 0 0 8px;
+  padding-left: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+h3 {
+  margin: 8px 0 6px;
+  font-size: 1rem;
+}
+
+.notice-good {
+  color: #9ff0b0;
+  font-weight: 700;
+}
+
+/* Minimapa y diferencia con el fantasma */
+
+.minimap {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  border-radius: 10px;
+}
+
+.hud-value[data-trend='ahead'] {
+  color: #9ff0b0;
+}
+
+.hud-value[data-trend='behind'] {
+  color: #ffb1a8;
 }

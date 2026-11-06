@@ -22,10 +22,15 @@ const SKY_RADIUS = 1400;
 export class Environment {
   readonly group = new Group();
   private readonly sky: Mesh;
+  private readonly sun: DirectionalLight;
+  private readonly sunOffset: [number, number, number];
 
   constructor(
     private readonly scene: Scene,
     palette: TrackPalette,
+    /** Sombras del sol (solo en calidad Alta): tamaño del mapa en px; 0 = sin sombras. */
+    shadowMapSize: number,
+    shadowArea: number,
   ) {
     const geometry = new SphereGeometry(SKY_RADIUS, 32, 16);
     const top = new Color(palette.skyTop);
@@ -53,7 +58,25 @@ export class Environment {
     this.group.add(hemi);
     const sun = new DirectionalLight(palette.sunColor, palette.sunIntensity);
     const [dx, dy, dz] = palette.sunDirection;
-    sun.position.set(dx * 100, dy * 100, dz * 100);
+    const len = Math.hypot(dx, dy, dz) || 1;
+    this.sunOffset = [(dx / len) * 120, (dy / len) * 120, (dz / len) * 120];
+    sun.position.set(...this.sunOffset);
+    if (shadowMapSize > 0) {
+      // Una sola luz con sombras, con un mapa que sigue al coche.
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(shadowMapSize, shadowMapSize);
+      const half = shadowArea / 2;
+      sun.shadow.camera.left = -half;
+      sun.shadow.camera.right = half;
+      sun.shadow.camera.top = half;
+      sun.shadow.camera.bottom = -half;
+      sun.shadow.camera.near = 1;
+      sun.shadow.camera.far = 300;
+      sun.shadow.bias = -0.0008;
+      sun.shadow.normalBias = 0.04;
+      this.group.add(sun.target);
+    }
+    this.sun = sun;
     this.group.add(sun);
 
     scene.fog = new Fog(palette.fog, palette.fogNear, palette.fogFar);
@@ -64,6 +87,13 @@ export class Environment {
   /** La cúpula sigue a la cámara para que el horizonte no se acerque nunca. */
   follow(x: number, y: number, z: number): void {
     this.sky.position.set(x, y, z);
+  }
+
+  /** Mueve la luz del sol (y su mapa de sombras) para que acompañe al coche. */
+  followTarget(x: number, y: number, z: number): void {
+    if (!this.sun.castShadow) return;
+    this.sun.target.position.set(x, y, z);
+    this.sun.position.set(x + this.sunOffset[0], y + this.sunOffset[1], z + this.sunOffset[2]);
   }
 
   detach(): void {

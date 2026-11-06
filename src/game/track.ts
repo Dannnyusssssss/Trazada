@@ -1,4 +1,4 @@
-import { ClosedCatmullRom, mod, vec2, type Vec2 } from '../core/math';
+import { ClosedCatmullRom, clamp, mod, vec2, type Vec2 } from '../core/math';
 import { TRACK, type Surface } from '../data/balance';
 import type { TrackDef } from '../data/tracks';
 
@@ -14,15 +14,56 @@ export interface TrackQuery {
   /** Dirección unitaria de la pista en ese punto (sentido de carrera). */
   tangentX: number;
   tangentZ: number;
+  /** Altura de la superficie en ese punto (m). Solo la usa el render: la física es 2D. */
+  height: number;
+  /** Pendiente longitudinal (m de subida por m de avance). */
+  grade: number;
+  /** Pendiente lateral por el peralte (m de subida por m hacia la izquierda). */
+  bank: number;
 }
 
 export function createTrackQuery(): TrackQuery {
-  return { index: 0, progress: 0, lateral: 0, surface: 'asphalt', tangentX: 1, tangentZ: 0 };
+  return {
+    index: 0,
+    progress: 0,
+    lateral: 0,
+    surface: 'asphalt',
+    tangentX: 1,
+    tangentZ: 0,
+    height: 0,
+    grade: 0,
+    bank: 0,
+  };
+}
+
+/** Spline Catmull-Rom uniforme de un valor (la altura) sobre los mismos segmentos que el trazado. */
+function catmullRom1D(v0: number, v1: number, v2: number, v3: number, t: number): number {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return (
+    0.5 *
+    (2 * v1 +
+      (-v0 + v2) * t +
+      (2 * v0 - 5 * v1 + 4 * v2 - v3) * t2 +
+      (-v0 + 3 * v1 - 3 * v2 + v3) * t3)
+  );
+}
+
+/** Media móvil circular de radio `radius` muestras. */
+function smoothCircular(values: Float64Array, radius: number): Float64Array {
+  const n = values.length;
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let sum = 0;
+    for (let k = -radius; k <= radius; k++) sum += values[mod(i + k, n)] ?? 0;
+    out[i] = sum / (2 * radius + 1);
+  }
+  return out;
 }
 
 /**
  * Pista lista para la simulación: línea central muestreada a intervalos regulares, con tangentes,
- * curvatura, tramos con piano y una rejilla espacial para encontrar rápido el punto más cercano.
+ * curvatura, altura, peralte, tramos con piano y una rejilla espacial para encontrar rápido el punto más cercano.
  */
 export class Track {
   readonly def: TrackDef;
@@ -35,14 +76,22 @@ export class Track {
   readonly wallDistance: number;
   readonly px: Float64Array;
   readonly pz: Float64Array;
+  /** Altura de la línea central (m). */
+  readonly py: Float64Array;
   readonly tx: Float64Array;
   readonly tz: Float64Array;
   /** Curvatura con signo (1/m); positiva en curvas a la izquierda. */
   readonly curvature: Float64Array;
+  /** Pendiente longitudinal en cada muestra. */
+  readonly grade: Float64Array;
+  /** Pendiente lateral del peralte en cada muestra (positiva: el lado izquierdo está más alto). */
+  readonly bank: Float64Array;
   /** 1 si el borde de la pista lleva piano en esa muestra. */
   readonly curbed: Uint8Array;
   /** Progreso de cada checkpoint (el 0 es la meta). */
   readonly checkpointProgress: Float64Array;
+  /** Altura mínima de la línea central (referencia del terreno lejano, que queda siempre por debajo). */
+  readonly minHeight: number;
 
   private readonly gridMinX: number;
   private readonly gridMinZ: number;
@@ -54,22 +103,35 @@ export class Track {
   constructor(def: TrackDef) {
     this.def = def;
     this.halfWidth = def.width / 2;
-    this.wallDistance = this.halfWidth + TRACK.runoffWidth;
+    this.wallDistance = this.halfWidth + def.runoff;
 
-    // 1. Longitud del arco con una polilínea densa sobre la spline.
-    const spline = new ClosedCatmullRom(def.points);
+    // 1. Longitud del arco con una polilínea densa sobre la spline (la altura usa los mismos parámetros).
+    const spline = new ClosedCatmullRom(def.points.map(([x, z]) => [x, z] as const));
+    const heights = def.points.map((point) => point[2]);
+    const m = heights.length;
     const sub = TRACK.splineSubdivisions;
     const denseCount = spline.segmentCount * sub;
     const dx = new Float64Array(denseCount + 1);
     const dz = new Float64Array(denseCount + 1);
+    const dy = new Float64Array(denseCount + 1);
     const ds = new Float64Array(denseCount + 1);
     const p = vec2();
     for (let i = 0; i <= denseCount; i++) {
-      spline.evaluate(Math.floor(i / sub), (i % sub) / sub, p);
+      const segment = Math.floor(i / sub);
+      const t = (i % sub) / sub;
+      spline.evaluate(segment, t, p);
       dx[i] = p.x;
       dz[i] = p.z;
-      if (i > 0)
+      dy[i] = catmullRom1D(
+        heights[mod(segment - 1, m)] ?? 0,
+        heights[mod(segment, m)] ?? 0,
+        heights[mod(segment + 1, m)] ?? 0,
+        heights[mod(segment + 2, m)] ?? 0,
+        t,
+      );
+      if (i > 0) {
         ds[i] = (ds[i - 1] ?? 0) + Math.hypot(p.x - (dx[i - 1] ?? 0), p.z - (dz[i - 1] ?? 0));
+      }
     }
     this.length = ds[denseCount] ?? 0;
 
@@ -79,6 +141,7 @@ export class Track {
     const n = this.sampleCount;
     this.px = new Float64Array(n);
     this.pz = new Float64Array(n);
+    const rawHeight = new Float64Array(n);
     let j = 0;
     for (let i = 0; i < n; i++) {
       const s = i * this.spacing;
@@ -88,11 +151,15 @@ export class Track {
       const t = s1 > s0 ? (s - s0) / (s1 - s0) : 0;
       this.px[i] = (dx[j] ?? 0) + ((dx[j + 1] ?? 0) - (dx[j] ?? 0)) * t;
       this.pz[i] = (dz[j] ?? 0) + ((dz[j + 1] ?? 0) - (dz[j] ?? 0)) * t;
+      rawHeight[i] = (dy[j] ?? 0) + ((dy[j + 1] ?? 0) - (dy[j] ?? 0)) * t;
     }
+    // La altura se suaviza para que no haya cambios bruscos de pendiente.
+    this.py = smoothCircular(rawHeight, TRACK.heightSmoothing);
 
-    // 3. Tangentes (diferencia central) y curvatura con signo.
+    // 3. Tangentes (diferencia central), curvatura con signo y pendiente.
     this.tx = new Float64Array(n);
     this.tz = new Float64Array(n);
+    this.grade = new Float64Array(n);
     const rawCurvature = new Float64Array(n);
     for (let i = 0; i < n; i++) {
       const prev = mod(i - 1, n);
@@ -109,29 +176,40 @@ export class Track {
       // Con la normal izquierda (z, -x), un giro a la izquierda da producto cruz negativo.
       const angle = Math.atan2(ax * bz - az * bx, ax * bx + az * bz);
       rawCurvature[i] = -angle / this.spacing;
+      this.grade[i] = ((this.py[next] ?? 0) - (this.py[prev] ?? 0)) / (2 * this.spacing);
     }
     // Suavizado leve de la curvatura para que el remuestreo no meta ruido.
-    this.curvature = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      let sum = 0;
-      for (let k = -2; k <= 2; k++) sum += rawCurvature[mod(i + k, n)] ?? 0;
-      this.curvature[i] = sum / 5;
-    }
+    this.curvature = smoothCircular(rawCurvature, 2);
 
-    // 4. Pianos: en las curvas cerradas, ampliados unas muestras antes y después.
+    // 4. Peralte: el exterior de la curva queda más alto, proporcional a la curvatura y con tope.
+    const rawBank = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      rawBank[i] = clamp(
+        -(this.curvature[i] ?? 0) * TRACK.bankPerCurvature * def.banking,
+        -TRACK.maxBank,
+        TRACK.maxBank,
+      );
+    }
+    this.bank = smoothCircular(rawBank, TRACK.bankSmoothing);
+
+    let minHeight = Infinity;
+    for (let i = 0; i < n; i++) minHeight = Math.min(minHeight, this.py[i] ?? 0);
+    this.minHeight = minHeight;
+
+    // 5. Pianos: en las curvas cerradas, ampliados unas muestras antes y después.
     this.curbed = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
       if (Math.abs(this.curvature[i] ?? 0) < TRACK.curbCurvature) continue;
       for (let k = -TRACK.curbPadding; k <= TRACK.curbPadding; k++) this.curbed[mod(i + k, n)] = 1;
     }
 
-    // 5. Checkpoints a intervalos iguales; el 0 es la meta.
+    // 6. Checkpoints a intervalos iguales; el 0 es la meta.
     this.checkpointProgress = new Float64Array(def.checkpointCount);
     for (let k = 0; k < def.checkpointCount; k++) {
       this.checkpointProgress[k] = (k * this.length) / def.checkpointCount;
     }
 
-    // 6. Rejilla espacial: cada celda guarda las muestras que pueden ser la más cercana a un punto de la
+    // 7. Rejilla espacial: cada celda guarda las muestras que pueden ser la más cercana a un punto de la
     //    celda situado dentro de la zona circulable (hasta el muro, con margen).
     const radius = this.wallDistance + 4;
     const cell = TRACK.gridCellSize;
@@ -180,6 +258,11 @@ export class Track {
     return this.pz[i] ?? 0;
   }
 
+  /** Altura de la superficie en la muestra `i` a una distancia lateral dada (incluye el peralte). */
+  heightAt(i: number, lateral: number): number {
+    return (this.py[i] ?? 0) + (this.bank[i] ?? 0) * lateral;
+  }
+
   /** Índice de la muestra más cercana a (x, z). Usa la rejilla y, fuera de ella, búsqueda completa. */
   nearestIndex(x: number, z: number): number {
     const c = Math.floor((x - this.gridMinX) / TRACK.gridCellSize);
@@ -193,17 +276,15 @@ export class Track {
     }
     let best = -1;
     let bestD = Infinity;
-    if (to > from) {
-      for (let k = from; k < to; k++) {
-        const i = this.gridItems[k] ?? 0;
-        const d = (this.x(i) - x) ** 2 + (this.z(i) - z) ** 2;
-        if (d < bestD) {
-          bestD = d;
-          best = i;
-        }
+    for (let k = from; k < to; k++) {
+      const i = this.gridItems[k] ?? 0;
+      const d = (this.x(i) - x) ** 2 + (this.z(i) - z) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = i;
       }
     }
-    // Si el punto está fuera de la zona cubierta (no debería pasar con los muros), búsqueda completa.
+    // Si el punto está fuera de la zona cubierta por la rejilla, búsqueda completa.
     const covered = this.wallDistance + 4;
     if (best < 0 || bestD > covered * covered) best = this.nearestIndexBruteForce(x, z);
     return best;
@@ -222,7 +303,7 @@ export class Track {
     return best;
   }
 
-  /** Consulta la pista en (x, z): progreso, distancia lateral, superficie y dirección. */
+  /** Consulta la pista en (x, z): progreso, distancia lateral, superficie, dirección y altura. */
   query(x: number, z: number, out: TrackQuery): TrackQuery {
     const i = this.nearestIndex(x, z);
     const tx = this.tx[i] ?? 1;
@@ -236,6 +317,12 @@ export class Track {
     out.surface = this.surfaceAt(i, out.lateral);
     out.tangentX = tx;
     out.tangentZ = tz;
+    out.grade = this.grade[i] ?? 0;
+    out.bank = this.bank[i] ?? 0;
+    // La pendiente corrige la altura entre muestras para que no haya escalones.
+    out.height =
+      this.heightAt(i, clamp(out.lateral, -this.wallDistance, this.wallDistance)) +
+      out.grade * along;
     return out;
   }
 
@@ -273,7 +360,7 @@ export function progressDelta(from: number, to: number, length: number): number 
 
 /**
  * Comprueba que un circuito es válido. Devuelve la lista de problemas (vacía si es correcto):
- * datos finitos, ancho mínimo, radio de curva mínimo, checkpoints coherentes y que la pista
+ * datos finitos, ancho mínimo, radio de curva mínimo, pendiente máxima, checkpoints coherentes y que la pista
  * no se cruce ni se acerque a sí misma (si no, el punto más cercano podría saltar de tramo).
  */
 export function validateTrack(track: Track): string[] {
@@ -282,32 +369,43 @@ export function validateTrack(track: Track): string[] {
   if (!/^[a-z0-9-]{1,32}$/.test(def.id)) errors.push('id inválido');
   if (def.name.trim().length === 0) errors.push('nombre vacío');
   if (def.points.length < 4) errors.push('menos de 4 puntos');
-  if (def.points.some(([x, z]) => !Number.isFinite(x) || !Number.isFinite(z)))
+  if (def.points.some((point) => point.some((v) => !Number.isFinite(v)))) {
     errors.push('punto no finito');
+  }
   if (!(def.width >= TRACK.minWidth)) errors.push('ancho menor que el mínimo');
+  if (!(def.runoff >= TRACK.minRunoff)) errors.push('franja de césped menor que la mínima');
+  if (!(def.banking >= 0 && def.banking <= 1)) errors.push('peralte fuera de rango');
   if (!Number.isInteger(def.checkpointCount) || def.checkpointCount < 3)
     errors.push('pocos checkpoints');
   if (def.checkpointCount * 40 > track.length) errors.push('checkpoints demasiado juntos');
+  const { bronze, silver, gold } = def.medals;
+  if (!(gold > 0 && gold < silver && silver < bronze))
+    errors.push('tiempos de medalla incoherentes');
 
   let maxCurvature = 0;
+  let maxGrade = 0;
   for (let i = 0; i < track.sampleCount; i++) {
     maxCurvature = Math.max(maxCurvature, Math.abs(track.curvature[i] ?? 0));
+    maxGrade = Math.max(maxGrade, Math.abs(track.grade[i] ?? 0));
   }
   if (maxCurvature > 1 / TRACK.minCurveRadius) {
     errors.push(`curva demasiado cerrada (radio ${(1 / maxCurvature).toFixed(1)} m)`);
+  }
+  if (maxGrade > TRACK.maxGrade) {
+    errors.push(`pendiente excesiva (${(maxGrade * 100).toFixed(1)} %)`);
   }
 
   // Dos puntos alejados a lo largo de la vuelta deben estar separados por al menos dos zonas circulables.
   const minSeparation = 2 * track.wallDistance + 2;
   const arcThreshold = Math.ceil((4 * track.wallDistance) / track.spacing);
   const n = track.sampleCount;
-  let crossings = 0;
-  for (let i = 0; i < n && crossings === 0; i++) {
+  let found = false;
+  for (let i = 0; i < n && !found; i++) {
     for (let k = i + arcThreshold; k < n; k++) {
       if (n - (k - i) < arcThreshold) break;
       const d = Math.hypot(track.x(i) - track.x(k), track.z(i) - track.z(k));
       if (d < minSeparation) {
-        crossings++;
+        found = true;
         errors.push(
           `la pista se acerca a sí misma cerca de las muestras ${i} y ${k} (${d.toFixed(1)} m)`,
         );

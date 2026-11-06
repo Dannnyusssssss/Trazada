@@ -25,14 +25,36 @@ export const TRACK = {
   curbCurvature: 1 / 75,
   /** Muestras de margen que se extiende el piano antes y después de la curva. */
   curbPadding: 6,
-  /** Franja de césped entre el borde del asfalto y el muro (m). */
-  runoffWidth: 6,
+  /** Franja de césped mínima entre el borde del asfalto y el muro (m); cada circuito define la suya. */
+  minRunoff: 2.5,
   /** Tamaño de la celda de la rejilla espacial para la consulta de punto más cercano (m). */
   gridCellSize: 16,
   /** Radio mínimo de curvatura permitido en los datos de un circuito (m). */
   minCurveRadius: 18,
   /** Ancho mínimo permitido (m). */
   minWidth: 9,
+  /** Radio (en muestras) del suavizado de la altura. */
+  heightSmoothing: 12,
+  /** Pendiente longitudinal máxima permitida (0.09 = 9 %). */
+  maxGrade: 0.09,
+  /** Peralte: pendiente lateral por unidad de curvatura, antes del factor de cada circuito. */
+  bankPerCurvature: 4.2,
+  /** Peralte máximo como pendiente lateral (tan 6° ≈ 0.105). */
+  maxBank: 0.105,
+  /** Radio (en muestras) del suavizado del peralte. */
+  bankSmoothing: 15,
+} as const;
+
+/** Terreno alrededor de la pista (solo visual). */
+export const TERRAIN = {
+  /** El terreno queda por debajo de la superficie de la pista bajo los muros (m). */
+  belowTrack: 0.35,
+  /** Distancia desde el muro en la que el terreno pasa de la altura de la pista a la del entorno (m). */
+  blendDistance: 70,
+  /** Margen del terreno detallado alrededor del circuito (m). */
+  margin: 130,
+  /** Separación entre vértices del terreno detallado (m). */
+  cellSize: 6,
 } as const;
 
 /** Efecto de cada superficie sobre el coche. */
@@ -82,6 +104,8 @@ export const RACE = {
   /** Tiempo de vuelta válido (ms) para aceptar un récord leído del guardado. */
   minLapMs: 5_000,
   maxLapMs: 3_600_000,
+  /** Vueltas de una sesión de contrarreloj; al terminarlas se muestran los resultados. */
+  timeTrialLaps: 3,
 } as const;
 
 export const CAMERA = {
@@ -102,14 +126,65 @@ export const CAMERA = {
   fovDefault: 70,
   fovMin: 55,
   fovMax: 90,
+  /** Cámara alta (tecla C): más lejos y más arriba. */
+  highDistance: 13,
+  highHeight: 8,
+  highLookAhead: 9,
+  /** Rapidez de la transición entre cámaras (1/s). */
+  switchRate: 4,
 } as const;
 
-export const RENDER = {
+export type Quality = 'low' | 'medium' | 'high';
+
+export interface QualityPreset {
   /** Tope de devicePixelRatio. */
-  maxPixelRatio: 2,
+  maxPixelRatio: number;
+  /** Fracción del escenario que se dibuja. */
+  sceneryDensity: number;
+  /** Sombras de la luz del sol (solo en Alta). */
+  shadows: boolean;
+  /** Tamaño del mapa de sombras (px). */
+  shadowMapSize: number;
+  /** Filtrado anisótropo máximo de las texturas. */
+  anisotropy: number;
+}
+
+export const QUALITY: Readonly<Record<Quality, QualityPreset>> = {
+  low: { maxPixelRatio: 1, sceneryDensity: 0.5, shadows: false, shadowMapSize: 0, anisotropy: 2 },
+  medium: {
+    maxPixelRatio: 1.5,
+    sceneryDensity: 1,
+    shadows: false,
+    shadowMapSize: 0,
+    anisotropy: 4,
+  },
+  high: { maxPixelRatio: 2, sceneryDensity: 1, shadows: true, shadowMapSize: 2048, anisotropy: 8 },
+};
+
+export const RENDER = {
+  /** Lado de la zona con sombras alrededor del coche (m), solo en calidad Alta. */
+  shadowArea: 90,
 } as const;
 
 export const HUD = {
   /** Tiempo que se muestra el aviso de vuelta completada (s). */
   lapMessageSeconds: 3,
+  /** Distancia recorrida en la vuelta antes de mostrar la diferencia con el fantasma (m). */
+  ghostDeltaMinDistance: 25,
+  /** Tamaño del minimapa en píxeles CSS. */
+  minimapSize: 170,
+} as const;
+
+export const GHOST = {
+  /** Muestras por segundo de la grabación. */
+  hz: 20,
+  /** Duración máxima de una vuelta grabada (s). */
+  maxSeconds: 240,
+  /** Cuantización: centímetros para la posición y diezmilésimas de radián para el rumbo. */
+  positionScale: 100,
+  headingScale: 10_000,
+  /** Opacidad del coche fantasma. */
+  opacity: 0.38,
+  /** Distancia máxima a la pista de una muestra válida (m), además de la distancia al muro. */
+  trackTolerance: 3,
 } as const;

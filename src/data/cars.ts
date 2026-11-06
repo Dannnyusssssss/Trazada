@@ -44,19 +44,34 @@ export interface CarParams {
   wheelRadius: number;
 }
 
+/** Silueta de la malla low-poly (solo visual). */
+export interface CarShape {
+  /** Escala del largo y del ancho de la carrocería. */
+  length: number;
+  width: number;
+  /** Escala del largo de la cabina. */
+  cabin: number;
+  wing: 'none' | 'low' | 'high';
+}
+
 export interface CarDef {
   id: string;
   name: string;
+  /** Descripción corta para la pantalla de selección. */
+  description: string;
   bodyColor: number;
   accentColor: number;
+  shape: CarShape;
   params: CarParams;
 }
 
 export const GORRION: CarDef = {
   id: 'gorrion',
   name: 'Gorrión',
+  description: 'Equilibrado: buena aceleración y giro predecible.',
   bodyColor: 0xf2a33a,
   accentColor: 0x23304a,
+  shape: { length: 1, width: 1, cabin: 1, wing: 'low' },
   params: {
     maxSpeed: 48,
     engineAccel: 15,
@@ -80,7 +95,50 @@ export const GORRION: CarDef = {
   },
 };
 
-export const CARS: readonly CarDef[] = [GORRION];
+export const CONDOR: CarDef = {
+  id: 'condor',
+  name: 'Cóndor',
+  description: 'Rápido en recta; gira más despacio y pide frenar antes.',
+  bodyColor: 0x3fa7e8,
+  accentColor: 0xf4f1e8,
+  shape: { length: 1.08, width: 1.03, cabin: 0.9, wing: 'high' },
+  params: {
+    ...GORRION.params,
+    maxSpeed: 53,
+    engineAccel: 14,
+    brakeDecel: 27,
+    turnRate: 1.62,
+    turnHighSpeedReduction: 0.46,
+    lateralGrip: 8.4,
+    collisionRadius: 1.1,
+  },
+};
+
+export const ZORRO: CarDef = {
+  id: 'zorro',
+  name: 'Zorro',
+  description: 'Ágil y con mucho agarre; menos velocidad punta.',
+  bodyColor: 0xd8452f,
+  accentColor: 0x1d1f26,
+  shape: { length: 0.92, width: 0.97, cabin: 1.05, wing: 'none' },
+  params: {
+    ...GORRION.params,
+    maxSpeed: 44,
+    engineAccel: 16.5,
+    brakeDecel: 27,
+    turnRate: 2.25,
+    turnHighSpeedReduction: 0.36,
+    lateralGrip: 10.5,
+    handbrakeGrip: 0.26,
+    collisionRadius: 1.0,
+  },
+};
+
+export const CARS: readonly CarDef[] = [GORRION, CONDOR, ZORRO];
+
+export function carById(id: string): CarDef | null {
+  return CARS.find((c) => c.id === id) ?? null;
+}
 
 /** Lista de los parámetros numéricos editables en el panel de depuración. */
 export const CAR_PARAM_KEYS = Object.keys(GORRION.params) as (keyof CarParams)[];

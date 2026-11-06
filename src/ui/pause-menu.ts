@@ -4,6 +4,7 @@ import { button, el, setText, setVisible } from './dom';
 export interface PauseActions {
   onResume: () => void;
   onRestart: () => void;
+  onSelect: () => void;
   onSettings: () => void;
   onMenu: () => void;
 }
@@ -26,6 +27,7 @@ export class PauseMenu {
         el('div', { className: 'actions actions-column' }, [
           this.resumeButton,
           button(TEXTS.pause.restart, actions.onRestart),
+          button(TEXTS.pause.select, actions.onSelect),
           button(TEXTS.pause.settings, actions.onSettings),
           button(TEXTS.pause.menu, actions.onMenu),
         ]),

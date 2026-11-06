@@ -4,7 +4,8 @@ import type { CarState } from './car';
 import type { Track, TrackQuery } from './track';
 import { progressDelta } from './track';
 
-export type RacePhase = 'countdown' | 'racing';
+/** Cuenta atrás, carrera en curso o sesión terminada (se completaron todas las vueltas). */
+export type RacePhase = 'countdown' | 'racing' | 'finished';
 
 /**
  * Estado de la contrarreloj: cuenta atrás, checkpoints en orden, vueltas, tiempos y aviso de contramano.
@@ -20,6 +21,10 @@ export interface RaceState {
   lapSteps: number;
   /** Vuelta en curso (empieza en 1). */
   lap: number;
+  /** Vueltas de la sesión; al completarlas la carrera termina. */
+  totalLaps: number;
+  /** Distancia recorrida en la vuelta en curso desde la meta (m); negativa si se va hacia atrás. */
+  lapDistance: number;
   /** Siguiente checkpoint que hay que cruzar; 0 es la meta. */
   nextCheckpoint: number;
   /** Último checkpoint cruzado (donde se reaparece). */
@@ -29,6 +34,10 @@ export interface RaceState {
   lapsCompleted: number;
   lastLapMs: number | null;
   bestLapMs: number | null;
+  /** Mejor vuelta de esta sesión. */
+  sessionBestMs: number | null;
+  /** Tiempos de las vueltas completadas en esta sesión (ms). */
+  lapTimes: number[];
   lastLapWasBest: boolean;
   wrongWay: boolean;
   wrongWaySteps: number;
@@ -43,19 +52,26 @@ export function secondsToSteps(seconds: number): number {
   return Math.round(seconds * SIM.hz);
 }
 
-export function createRaceState(bestLapMs: number | null): RaceState {
+export function createRaceState(
+  bestLapMs: number | null,
+  totalLaps: number = RACE.timeTrialLaps,
+): RaceState {
   return {
     phase: 'countdown',
     countdownSteps: secondsToSteps(RACE.countdownSeconds),
     raceSteps: 0,
     lapSteps: 0,
     lap: 1,
+    totalLaps,
+    lapDistance: RACE.startOffset,
     nextCheckpoint: 1,
     lastCheckpoint: 0,
     progress: RACE.startOffset,
     lapsCompleted: 0,
     lastLapMs: null,
     bestLapMs,
+    sessionBestMs: null,
+    lapTimes: [],
     lastLapWasBest: false,
     wrongWay: false,
     wrongWaySteps: 0,
@@ -85,6 +101,7 @@ export function updateProgress(race: RaceState, track: Track, progress: number):
   const delta = progressDelta(race.progress, progress, length);
   const previous = race.progress;
   race.progress = progress;
+  race.lapDistance += delta;
   if (delta <= 0) return false;
 
   const target = track.checkpointProgress[race.nextCheckpoint] ?? 0;
@@ -102,9 +119,14 @@ export function updateProgress(race: RaceState, track: Track, progress: number):
   race.lastLapMs = lapMs;
   race.lastLapWasBest = race.bestLapMs === null || lapMs < race.bestLapMs;
   if (race.lastLapWasBest) race.bestLapMs = lapMs;
+  if (race.sessionBestMs === null || lapMs < race.sessionBestMs) race.sessionBestMs = lapMs;
+  race.lapTimes.push(lapMs);
   race.lapsCompleted++;
-  race.lap++;
   race.lapSteps = 0;
+  // La vuelta nueva empieza en la meta: la distancia es lo que ya se ha pasado de la línea.
+  race.lapDistance = progressDelta(0, progress, length);
+  if (race.lapsCompleted >= race.totalLaps) race.phase = 'finished';
+  else race.lap++;
   return true;
 }
 

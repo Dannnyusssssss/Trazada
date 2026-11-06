@@ -5,7 +5,7 @@ no consumen CPU. Cualquier otro valor o parámetro se ignora.
 
 | Parámetro | Valores aceptados | Efecto |
 |---|---|---|
-| `?debug` | `?debug`, `?debug=1`, `?debug=true` | Muestra el panel de depuración: FPS, llamadas de dibujo, velocidad, superficie, progreso, distancia lateral, siguiente checkpoint y los parámetros de física del coche editables en vivo. |
+| `?debug` | `?debug`, `?debug=1`, `?debug=true` | Muestra el panel de depuración: FPS, llamadas de dibujo, geometrías y texturas en memoria (para detectar fugas al cambiar de circuito), velocidad, superficie, progreso, distancia lateral, siguiente checkpoint y los parámetros de física del coche editables en vivo. |
 
 ## Panel de física
 

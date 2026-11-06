@@ -13,7 +13,7 @@ const track = new Track(def);
 
 describe('World', () => {
   it('declara los sistemas en orden fijo', () => {
-    expect(SYSTEMS.length).toBe(5);
+    expect(SYSTEMS.length).toBe(6);
   });
 
   it('el coche no se mueve durante la cuenta atrás', () => {
@@ -89,5 +89,38 @@ describe('World', () => {
     world.reset();
     expect(world.race.bestLapMs).toBe(44_000);
     expect(world.race.phase).toBe('countdown');
+  });
+});
+
+describe('sesión de contrarreloj', () => {
+  it('termina al completar las vueltas de la sesión y guarda la mejor de la sesión', () => {
+    const world = new World(track, GORRION, null);
+    const controls = createControls();
+    for (let s = 0; s < SIM.hz * 400 && world.race.phase !== 'finished'; s++) {
+      autopilot(world, controls);
+      world.step({ controls, respawn: false });
+    }
+    const race = world.race;
+    expect(race.phase).toBe('finished');
+    expect(race.lapsCompleted).toBe(race.totalLaps);
+    expect(race.lap).toBe(race.totalLaps);
+    expect(race.sessionBestMs).not.toBeNull();
+    // Terminada la sesión, el cronómetro se detiene.
+    const steps = race.raceSteps;
+    world.step({ controls, respawn: false });
+    expect(world.race.raceSteps).toBe(steps);
+  });
+
+  it('la distancia de la vuelta crece al avanzar y vuelve a cero en la meta', () => {
+    const world = new World(track, GORRION, null);
+    const controls = createControls();
+    let maxDistance = 0;
+    for (let s = 0; s < SIM.hz * 200 && world.race.lapsCompleted < 1; s++) {
+      autopilot(world, controls);
+      world.step({ controls, respawn: false });
+      maxDistance = Math.max(maxDistance, world.race.lapDistance);
+    }
+    expect(maxDistance).toBeGreaterThan(track.length - 5);
+    expect(world.race.lapDistance).toBeLessThan(5);
   });
 });

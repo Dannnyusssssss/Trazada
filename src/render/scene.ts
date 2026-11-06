@@ -1,5 +1,6 @@
 import {
   ACESFilmicToneMapping,
+  PCFShadowMap,
   PerspectiveCamera,
   SRGBColorSpace,
   Scene,
@@ -90,9 +91,20 @@ export class GameRenderer {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** Llamadas de dibujo del último frame (para el panel de depuración). */
-  get drawCalls(): number {
-    return this.renderer.info.render.calls;
+  /** Llamadas de dibujo del último frame y recursos en memoria de la GPU (para el panel de depuración). */
+  get stats(): { calls: number; geometries: number; textures: number } {
+    const info = this.renderer.info;
+    return {
+      calls: info.render.calls,
+      geometries: info.memory.geometries,
+      textures: info.memory.textures,
+    };
+  }
+
+  /** Activa o desactiva las sombras (solo calidad Alta). */
+  setShadows(enabled: boolean): void {
+    this.renderer.shadowMap.enabled = enabled;
+    this.renderer.shadowMap.type = PCFShadowMap;
   }
 
   /** Detecta cambios de devicePixelRatio (mover la ventana a otro monitor o hacer zoom). */

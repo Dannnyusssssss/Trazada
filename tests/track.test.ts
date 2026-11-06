@@ -9,11 +9,11 @@ import { Track, createTrackQuery, progressDelta, validateTrack } from '../src/ga
 function circleDef(radius = 100): TrackDef {
   const base = TRACKS[0];
   if (!base) throw new Error('sin circuitos');
-  const points: [number, number][] = [];
+  const points: [number, number, number][] = [];
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2;
     // Con rumbo (cos h, -sin h), recorrer (cos a, -sin a) gira siempre a la izquierda.
-    points.push([Math.cos(a) * radius, -Math.sin(a) * radius]);
+    points.push([Math.cos(a) * radius, -Math.sin(a) * radius, 0]);
   }
   return { ...base, id: 'circulo', name: 'Círculo', points, checkpointCount: 6 };
 }
@@ -40,14 +40,14 @@ describe('datos de circuitos', () => {
     const eight: TrackDef = {
       ...base,
       points: [
-        [0, 0],
-        [150, 120],
-        [300, 0],
-        [150, -120],
-        [0, 0.5],
-        [-150, 120],
-        [-300, 0],
-        [-150, -120],
+        [0, 0, 0],
+        [150, 120, 0],
+        [300, 0, 0],
+        [150, -120, 0],
+        [0, 0.5, 0],
+        [-150, 120, 0],
+        [-300, 0, 0],
+        [-150, -120, 0],
       ],
     };
     expect(validateTrack(new Track(eight)).length).toBeGreaterThan(0);

@@ -57,7 +57,11 @@ export class DebugOverlay {
     }
   }
 
-  update(now: number, frameSeconds: number, drawCalls: number): void {
+  update(
+    now: number,
+    frameSeconds: number,
+    render: { calls: number; geometries: number; textures: number },
+  ): void {
     this.frames++;
     this.frameTime += frameSeconds;
     if (now - this.lastRefresh < REFRESH_MS) return;
@@ -72,7 +76,8 @@ export class DebugOverlay {
       this.stats,
       [
         `FPS        ${fps.toFixed(0)}`,
-        `draw calls ${drawCalls}`,
+        `draw calls ${render.calls}`,
+        `memoria    ${render.geometries} geometrías, ${render.textures} texturas`,
         `velocidad  ${(car.forwardSpeed * 3.6).toFixed(1)} km/h`,
         `derrape    ${car.lateralSpeed.toFixed(2)} m/s`,
         `superficie ${TEXTS.surfaces[car.surface]}`,

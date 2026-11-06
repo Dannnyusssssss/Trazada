@@ -2,7 +2,8 @@ import { HUD as HUD_BALANCE, RACE, SIM } from '../data/balance';
 import { TEXTS } from '../data/texts';
 import type { World } from '../game/world';
 import { el, setText, setVisible } from '../ui/dom';
-import { formatLapTime, formatSpeed } from '../ui/format';
+import { formatDelta, formatLapTime, formatSpeed } from '../ui/format';
+import { Minimap } from './minimap';
 import { stepsToMs } from '../game/race';
 
 /**
@@ -15,6 +16,9 @@ export class Hud {
   private readonly timeValue: HTMLElement;
   private readonly lastValue: HTMLElement;
   private readonly bestValue: HTMLElement;
+  private readonly ghostRow: HTMLElement;
+  private readonly ghostValue: HTMLElement;
+  readonly minimap = new Minimap();
   private readonly speedValue: HTMLElement;
   private readonly countdown: HTMLElement;
   private readonly wrongWay: HTMLElement;
@@ -38,6 +42,9 @@ export class Hud {
     const [timeRow, timeValue] = row(TEXTS.hud.time);
     const [lastRow, lastValue] = row(TEXTS.hud.last);
     const [bestRow, bestValue] = row(TEXTS.hud.best);
+    const [ghostRow, ghostValue] = row(TEXTS.hud.ghost);
+    this.ghostRow = ghostRow;
+    this.ghostValue = ghostValue;
     this.lapValue = lapValue;
     this.timeValue = timeValue;
     this.lastValue = lastValue;
@@ -63,7 +70,14 @@ export class Hud {
     this.lapMessage = el('div', { className: 'hud-banner', attrs: { 'aria-live': 'polite' } });
 
     this.root = el('div', { className: 'hud' }, [
-      el('div', { className: 'hud-panel hud-times' }, [lapRow, timeRow, lastRow, bestRow]),
+      el('div', { className: 'hud-panel hud-times' }, [
+        lapRow,
+        timeRow,
+        lastRow,
+        bestRow,
+        ghostRow,
+      ]),
+      this.minimap.canvas,
       el('div', { className: 'hud-top-right' }, [
         this.soundButton,
         el('div', { className: 'hud-panel hud-hint', text: TEXTS.hud.keysHint }),
@@ -87,9 +101,19 @@ export class Hud {
     setVisible(this.lapMessage, false);
   }
 
-  update(world: World, speed: number): void {
+  /**
+   * Actualiza el HUD. `ghostDeltaMs` es la diferencia con el fantasma en el mismo punto de la vuelta
+   * (negativa = vas por delante) o null si no hay fantasma o aún no se puede comparar.
+   */
+  update(world: World, speed: number, ghostDeltaMs: number | null): void {
     const race = world.race;
-    setText(this.lapValue, String(race.lap));
+    setText(this.lapValue, `${race.lap}/${race.totalLaps}`);
+    setVisible(this.ghostRow, ghostDeltaMs !== null);
+    if (ghostDeltaMs !== null) {
+      // Signo y color: el signo basta para entenderlo sin distinguir colores.
+      setText(this.ghostValue, formatDelta(ghostDeltaMs));
+      this.ghostValue.dataset.trend = ghostDeltaMs < 0 ? 'ahead' : 'behind';
+    }
     setText(this.timeValue, formatLapTime(stepsToMs(race.lapSteps)));
     setText(this.lastValue, formatLapTime(race.lastLapMs));
     setText(this.bestValue, formatLapTime(race.bestLapMs));

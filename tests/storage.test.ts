@@ -96,6 +96,31 @@ describe('parseSave', () => {
   });
 });
 
+describe('compatibilidad', () => {
+  it('un guardado del Hito 1 carga con los ajustes nuevos por defecto', () => {
+    const old = JSON.stringify({
+      version: 1,
+      settings: { muted: true, reducedMotion: false, fov: 80 },
+      bestLaps: { 'valle-solar': { gorrion: 58_000 } },
+    });
+    const save = parseSave(old, defaults);
+    expect(save.settings).toEqual({ ...defaults.settings, muted: true, fov: 80 });
+    expect(save.bestLaps).toEqual({ 'valle-solar': { gorrion: 58_000 } });
+  });
+
+  it('valida calidad, cámara y última selección', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      settings: { quality: 'ultra', camera: 'high', lastTrackId: 'cumbre', lastCarId: '<b>' },
+    });
+    const save = parseSave(raw, defaults);
+    expect(save.settings.quality).toBe('medium');
+    expect(save.settings.camera).toBe('high');
+    expect(save.settings.lastTrackId).toBe('cumbre');
+    expect(save.settings.lastCarId).toBe('gorrion');
+  });
+});
+
 describe('SaveStore', () => {
   it('guarda récords solo si mejoran y los persiste con la clave del juego', () => {
     const storage = new MemoryStorage();
@@ -134,6 +159,6 @@ describe('SaveStore', () => {
     const storage = new MemoryStorage();
     new SaveStore(storage, defaults).updateSettings({ reducedMotion: true, fov: 75 });
     const reloaded = new SaveStore(storage, defaults);
-    expect(reloaded.data.settings).toEqual({ muted: false, reducedMotion: true, fov: 75 });
+    expect(reloaded.data.settings).toMatchObject({ muted: false, reducedMotion: true, fov: 75 });
   });
 });

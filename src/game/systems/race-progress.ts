@@ -7,6 +7,6 @@ export const raceSystem: System = (world) => {
   if (race.phase !== 'racing') return;
   race.raceSteps++;
   race.lapSteps++;
-  updateProgress(race, world.track, world.query.progress);
+  world.lapCompletedThisStep = updateProgress(race, world.track, world.query.progress);
   updateWrongWay(race, world.car, world.query);
 };

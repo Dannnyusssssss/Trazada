@@ -1,4 +1,4 @@
-import { CAMERA, RACE } from '../data/balance';
+import { CAMERA, RACE, type Quality } from '../data/balance';
 import { META, SAVE_KEY } from '../data/meta';
 
 /**
@@ -12,6 +12,11 @@ export interface Settings {
   reducedMotion: boolean;
   /** Campo de visión base (grados). */
   fov: number;
+  quality: Quality;
+  camera: 'chase' | 'high';
+  /** Última selección de circuito y coche (ids; se comprueba al usarlos que existan). */
+  lastTrackId: string;
+  lastCarId: string;
 }
 
 export interface SaveData {
@@ -30,11 +35,19 @@ export interface StorageLike {
 const MAX_RAW_LENGTH = 64 * 1024;
 const MAX_TRACKS = 64;
 const MAX_CARS_PER_TRACK = 32;
-const ID_PATTERN = /^[a-z0-9-]{1,32}$/;
+export const ID_PATTERN = /^[a-z0-9-]{1,32}$/;
 
 export function defaultSave(prefersReducedMotion: boolean): SaveData {
   return {
-    settings: { muted: false, reducedMotion: prefersReducedMotion, fov: CAMERA.fovDefault },
+    settings: {
+      muted: false,
+      reducedMotion: prefersReducedMotion,
+      fov: CAMERA.fovDefault,
+      quality: 'medium',
+      camera: 'chase',
+      lastTrackId: 'valle-solar',
+      lastCarId: 'gorrion',
+    },
     bestLaps: {},
   };
 }
@@ -78,6 +91,22 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
       fov <= CAMERA.fovMax
     ) {
       result.settings.fov = Math.round(fov);
+    }
+    // Campos añadidos en el Hito 2: si faltan (guardado anterior) quedan los valores por defecto.
+    if (
+      settings.quality === 'low' ||
+      settings.quality === 'medium' ||
+      settings.quality === 'high'
+    ) {
+      result.settings.quality = settings.quality;
+    }
+    if (settings.camera === 'chase' || settings.camera === 'high')
+      result.settings.camera = settings.camera;
+    if (typeof settings.lastTrackId === 'string' && ID_PATTERN.test(settings.lastTrackId)) {
+      result.settings.lastTrackId = settings.lastTrackId;
+    }
+    if (typeof settings.lastCarId === 'string' && ID_PATTERN.test(settings.lastCarId)) {
+      result.settings.lastCarId = settings.lastCarId;
     }
   }
 
