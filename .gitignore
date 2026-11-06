@@ -1,0 +1,9 @@
+# Dependencias y resultados de compilación
+node_modules/
+dist/
+coverage/
+
+# Variables de entorno y claves (el juego no las usa)
+.env*
+*.pem
+*.key
