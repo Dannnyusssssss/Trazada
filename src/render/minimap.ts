@@ -3,6 +3,14 @@ import type { Track } from '../game/track';
 
 const PADDING = 10;
 
+/** Punto de un rival en el minimapa. */
+export interface MinimapDot {
+  x: number;
+  z: number;
+  /** Color CSS. */
+  color: string;
+}
+
 /**
  * Minimapa 2D en un <canvas> pequeño. El trazado se dibuja una sola vez en un canvas aparte; en cada frame
  * solo se copia y se pintan los puntos del coche y del fantasma. Vista cenital con el norte fijo
@@ -112,8 +120,17 @@ export class Minimap {
     ctx.stroke();
   }
 
-  /** Dibuja el frame: el fantasma (si hay) debajo y el coche encima. */
-  draw(carX: number, carZ: number, ghostX: number | null, ghostZ: number | null): void {
+  /**
+   * Dibuja el frame: el fantasma (si hay) y los rivales debajo, y el coche del jugador encima.
+   * El jugador se distingue por la forma (más grande, con un anillo blanco), no solo por el color.
+   */
+  draw(
+    carX: number,
+    carZ: number,
+    ghostX: number | null,
+    ghostZ: number | null,
+    rivals: readonly MinimapDot[] = [],
+  ): void {
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -121,6 +138,7 @@ export class Minimap {
     ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
     if (ghostX !== null && ghostZ !== null)
       this.dot(ghostX, ghostZ, 4, 'rgba(240,244,255,0.75)', '#11141c');
-    this.dot(carX, carZ, 5, '#ffb547', '#11141c');
+    for (const rival of rivals) this.dot(rival.x, rival.z, 3.5, rival.color, '#11141c');
+    this.dot(carX, carZ, 6, '#ffb547', '#ffffff');
   }
 }

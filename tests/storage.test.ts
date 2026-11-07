@@ -162,3 +162,86 @@ describe('SaveStore', () => {
     expect(reloaded.data.settings).toMatchObject({ muted: false, reducedMotion: true, fov: 75 });
   });
 });
+
+describe('guardado del Hito 3 (modo, dificultad, sonido, ayudas y puestos)', () => {
+  it('un guardado del Hito 2 carga con los valores nuevos por defecto', () => {
+    const old = JSON.stringify({
+      version: 1,
+      settings: {
+        muted: true,
+        reducedMotion: false,
+        fov: 70,
+        quality: 'high',
+        camera: 'chase',
+        lastTrackId: 'cumbre',
+        lastCarId: 'zorro',
+      },
+      bestLaps: { cumbre: { zorro: 70_000 } },
+    });
+    const data = parseSave(old, defaults);
+    expect(data.settings.muted).toBe(true);
+    expect(data.settings.quality).toBe('high');
+    expect(data.settings.mode).toBe('timeTrial');
+    expect(data.settings.difficulty).toBe('normal');
+    expect(data.settings.volume).toBe(defaults.settings.volume);
+    expect(data.settings.music).toBe(true);
+    expect(data.settings.assists).toEqual(defaults.settings.assists);
+    expect(data.raceBest).toEqual({});
+    expect(data.bestLaps).toEqual({ cumbre: { zorro: 70_000 } });
+  });
+
+  it('valida cada campo nuevo y descarta lo que no es válido', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      settings: {
+        mode: 'online',
+        difficulty: 'imposible',
+        volume: 250,
+        music: 'sí',
+        assists: { steering: true, braking: 'no', autoRespawn: false, extra: true },
+      },
+      raceBest: {
+        'valle-solar': { easy: 1, normal: 0, hard: 2.5 },
+        cumbre: { normal: 9 },
+        __proto__: { easy: 1 },
+        'Mal Id': { easy: 1 },
+      },
+    });
+    const data = parseSave(raw, defaults);
+    expect(data.settings.mode).toBe('timeTrial');
+    expect(data.settings.difficulty).toBe('normal');
+    expect(data.settings.volume).toBe(defaults.settings.volume);
+    expect(data.settings.music).toBe(true);
+    expect(data.settings.assists).toEqual({ steering: true, braking: false, autoRespawn: false });
+    expect(data.raceBest).toEqual({ 'valle-solar': { easy: 1 } });
+  });
+
+  it('acepta valores nuevos válidos', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      settings: { mode: 'race', difficulty: 'hard', volume: 35, music: false },
+      raceBest: { 'puerto-neon': { hard: 3 } },
+    });
+    const data = parseSave(raw, defaults);
+    expect(data.settings).toMatchObject({
+      mode: 'race',
+      difficulty: 'hard',
+      volume: 35,
+      music: false,
+    });
+    expect(data.raceBest).toEqual({ 'puerto-neon': { hard: 3 } });
+  });
+
+  it('guarda el mejor puesto solo si mejora y lo conserva al recargar', () => {
+    const storage = new MemoryStorage();
+    const store = new SaveStore(storage, defaults);
+    expect(store.recordRacePosition('valle-solar', 'normal', 4)).toBe(true);
+    expect(store.recordRacePosition('valle-solar', 'normal', 5)).toBe(false);
+    expect(store.recordRacePosition('valle-solar', 'normal', 2)).toBe(true);
+    expect(store.recordRacePosition('valle-solar', 'normal', 0)).toBe(false);
+    expect(store.recordRacePosition('valle-solar', 'normal', 7)).toBe(false);
+    const reloaded = new SaveStore(storage, defaults);
+    expect(reloaded.getRaceBest('valle-solar', 'normal')).toBe(2);
+    expect(reloaded.getRaceBest('valle-solar', 'hard')).toBeNull();
+  });
+});

@@ -1,5 +1,6 @@
 import { CAMERA, type Quality } from '../data/balance';
 import { TEXTS } from '../data/texts';
+import { defaultAssists, type AssistSettings } from '../game/assists';
 import type { Settings } from '../save/storage';
 import { button, el, setText, setVisible, toggle } from './dom';
 
@@ -26,8 +27,8 @@ function radioGroup<T extends string>(
 }
 
 /**
- * Panel de ajustes: "Reducir movimiento", campo de visión, calidad gráfica, cámara y silencio.
- * Los cambios se aplican al momento.
+ * Panel de ajustes: "Reducir movimiento", campo de visión, calidad gráfica, cámara, sonido (silencio,
+ * volumen y música) y ayudas de conducción. Los cambios se aplican al momento.
  */
 export class SettingsPanel {
   readonly root: HTMLElement;
@@ -37,7 +38,15 @@ export class SettingsPanel {
   private readonly fovValue: HTMLElement;
   private readonly quality: Map<Quality, HTMLInputElement>;
   private readonly camera: Map<'chase' | 'high', HTMLInputElement>;
+  private readonly volume: HTMLInputElement;
+  private readonly volumeValue: HTMLElement;
+  private readonly music: HTMLInputElement;
+  private readonly steering: HTMLInputElement;
+  private readonly braking: HTMLInputElement;
+  private readonly autoRespawn: HTMLInputElement;
   private readonly backButton: HTMLButtonElement;
+  /** Ayudas actuales (cada interruptor cambia una y se guardan las tres juntas). */
+  private assists: AssistSettings = defaultAssists();
 
   constructor(onChange: (patch: Partial<Settings>) => void, onBack: () => void) {
     const mute = toggle(
@@ -85,6 +94,52 @@ export class SettingsPanel {
     );
     this.quality = quality.inputs;
     this.camera = camera.inputs;
+
+    this.volume = el('input', {
+      attrs: { type: 'range', min: '0', max: '100', step: '5', id: 'volume-input' },
+    });
+    this.volumeValue = el('output', { attrs: { for: 'volume-input' } });
+    this.volume.addEventListener('input', () => {
+      const volume = Number(this.volume.value);
+      setText(this.volumeValue, `${volume}${TEXTS.settings.volumeUnit}`);
+      onChange({ volume });
+    });
+    const music = toggle(
+      TEXTS.settings.music,
+      true,
+      (on) => onChange({ music: on }),
+      TEXTS.settings.musicHint,
+    );
+    this.music = music.input;
+    // Cada interruptor cambia una ayuda; se guardan las tres juntas.
+    const assist = (key: keyof AssistSettings, label: string, hint: string) =>
+      toggle(
+        label,
+        false,
+        (on) => {
+          this.assists = { ...this.assists, [key]: on };
+          onChange({ assists: this.assists });
+        },
+        hint,
+      );
+    const steering = assist(
+      'steering',
+      TEXTS.settings.steeringAssist,
+      TEXTS.settings.steeringAssistHint,
+    );
+    const braking = assist(
+      'braking',
+      TEXTS.settings.brakingAssist,
+      TEXTS.settings.brakingAssistHint,
+    );
+    const respawn = assist(
+      'autoRespawn',
+      TEXTS.settings.autoRespawn,
+      TEXTS.settings.autoRespawnHint,
+    );
+    this.steering = steering.input;
+    this.braking = braking.input;
+    this.autoRespawn = respawn.input;
     this.backButton = button(TEXTS.settings.back, onBack, 'btn btn-primary');
     this.root = el(
       'section',
@@ -100,6 +155,18 @@ export class SettingsPanel {
         quality.root,
         camera.root,
         mute.root,
+        el('div', { className: 'range' }, [
+          el('label', { text: TEXTS.settings.volume, attrs: { for: 'volume-input' } }),
+          this.volume,
+          this.volumeValue,
+        ]),
+        music.root,
+        el('fieldset', { className: 'assists' }, [
+          el('legend', { text: TEXTS.settings.assistsTitle }),
+          steering.root,
+          braking.root,
+          respawn.root,
+        ]),
         el('div', { className: 'actions' }, [this.backButton]),
       ],
     );
@@ -114,6 +181,13 @@ export class SettingsPanel {
     if (q) q.checked = true;
     const c = this.camera.get(settings.camera);
     if (c) c.checked = true;
+    this.volume.value = String(settings.volume);
+    setText(this.volumeValue, `${settings.volume}${TEXTS.settings.volumeUnit}`);
+    this.music.checked = settings.music;
+    this.assists = { ...settings.assists };
+    this.steering.checked = settings.assists.steering;
+    this.braking.checked = settings.assists.braking;
+    this.autoRespawn.checked = settings.assists.autoRespawn;
     setVisible(this.root, true);
     this.backButton.focus({ preventScroll: true });
   }

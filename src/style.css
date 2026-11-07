@@ -106,7 +106,7 @@ h2 {
 
 .controls-list {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 6px 12px;
   margin: 0;
 }
@@ -530,4 +530,74 @@ h3 {
 
 .hud-value[data-trend='behind'] {
   color: #ffb1a8;
+}
+
+/* Hito 3: modo y dificultad, posición, derrape, clasificación y ayudas */
+
+.select-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0 16px;
+}
+
+.select-modes .radio-row {
+  margin: 0 0 12px;
+}
+
+.radio-hint {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.radio-row:disabled {
+  opacity: 0.55;
+}
+
+.hud-position {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.hud-drift {
+  right: 16px;
+  bottom: 84px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.standings {
+  margin: 0 0 8px;
+  padding-left: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.standing-player {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.assists {
+  border: 1px solid #3a4360;
+  border-radius: 8px;
+  padding: 8px 12px 4px;
+  margin: 12px 0;
+}
+
+.assists legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+
+/* Columna del mando en la lista de controles de la pantalla de inicio */
+
+.controls-head {
+  display: flex;
+  justify-content: flex-end;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: -6px 0 2px;
+}
+
+.pad-button kbd {
+  min-width: 2.6em;
 }

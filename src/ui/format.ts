@@ -35,3 +35,8 @@ export function statDots(value: number, min: number, max: number): string {
 export function formatSpeed(metersPerSecond: number): string {
   return String(Math.round(Math.abs(metersPerSecond) * 3.6));
 }
+
+/** Tiempo total de una carrera (mismo formato m:ss.mmm que una vuelta, admite más de 10 minutos). */
+export function formatRaceTime(ms: number | null): string {
+  return formatLapTime(ms);
+}

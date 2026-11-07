@@ -13,7 +13,7 @@ const track = new Track(def);
 
 describe('World', () => {
   it('declara los sistemas en orden fijo', () => {
-    expect(SYSTEMS.length).toBe(6);
+    expect(SYSTEMS.length).toBe(8);
   });
 
   it('el coche no se mueve durante la cuenta atrás', () => {

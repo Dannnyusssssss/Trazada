@@ -1,6 +1,6 @@
 import { Vector3, type PerspectiveCamera } from 'three';
 import { dampFactor, lerp, lerpAngle } from '../core/math';
-import { CAMERA } from '../data/balance';
+import { CAMERA, EFFECTS } from '../data/balance';
 
 export type CameraMode = 'chase' | 'high';
 
@@ -78,5 +78,55 @@ export class ChaseCamera {
     this.camera.position.copy(this.position);
     this.lookAt.set(x + fx * ahead, this.y + CAMERA.lookHeight, z + fz * ahead);
     this.camera.lookAt(this.lookAt);
+  }
+}
+
+/**
+ * Efectos de cámara ligados a la velocidad: un aumento suave del campo de visión y una sacudida leve
+ * (más un pequeño golpe al chocar). Todo con suavizado independiente de los FPS. Con "Reducir movimiento"
+ * no hay ni sacudida ni cambio de campo de visión.
+ */
+export class CameraEffects {
+  /** Grados que se suman al campo de visión base. */
+  fovOffset = 0;
+  /** Desplazamiento de la cámara por la sacudida (m). */
+  readonly shake = new Vector3();
+  private time = 0;
+  private impact = 0;
+
+  /** Golpe contra un muro o un coche (velocidad de cierre en m/s). */
+  hit(impactSpeed: number): void {
+    const amount = EFFECTS.shakeImpact * Math.min(1, impactSpeed * EFFECTS.shakeImpactPerSpeed * 8);
+    this.impact = Math.max(this.impact, amount);
+  }
+
+  update(speedFraction: number, dt: number, reducedMotion: boolean): void {
+    if (reducedMotion) {
+      this.fovOffset = 0;
+      this.impact = 0;
+      this.shake.set(0, 0, 0);
+      return;
+    }
+    const s = Math.max(0, Math.min(1, speedFraction));
+    // Solo a partir de media velocidad, creciendo de forma suave.
+    const boost = EFFECTS.fovBoost * Math.max(0, (s - 0.45) / 0.55) ** 2;
+    this.fovOffset = lerp(this.fovOffset, boost, dampFactor(EFFECTS.fovRate, dt));
+    this.time += dt;
+    this.impact *= Math.exp(-EFFECTS.shakeDecay * dt);
+    // Suma de senos de frecuencias distintas: un temblor leve y continuo, sin saltos.
+    const t = this.time;
+    const a = EFFECTS.shakeSpeed * s * s;
+    const b = this.impact;
+    this.shake.set(
+      a * (Math.sin(t * 11.3) + Math.sin(t * 7.1 + 1.7)) * 0.5 + b * Math.sin(t * 31),
+      a * (Math.sin(t * 13.7 + 0.4) + Math.sin(t * 5.3)) * 0.5 + b * Math.sin(t * 27 + 1),
+      0,
+    );
+  }
+
+  reset(): void {
+    this.fovOffset = 0;
+    this.impact = 0;
+    this.shake.set(0, 0, 0);
   }
 }

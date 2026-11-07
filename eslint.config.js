@@ -30,6 +30,8 @@ export default defineConfig(
   },
   {
     files: pureLogicFiles,
+    // El adaptador WebAudio es la única parte del audio que usa la API del navegador.
+    ignores: ['src/audio/web/**'],
     rules: {
       'no-restricted-imports': [
         'error',

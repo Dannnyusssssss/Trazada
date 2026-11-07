@@ -76,6 +76,8 @@ export interface TrackDef {
   scenery: readonly SceneryRule[];
   /** Separación de las farolas a lo largo de la pista (m); 0 = sin farolas. */
   lampSpacing: number;
+  /** Circuito nocturno: los coches llevan los faros encendidos con su haz sobre el asfalto. */
+  night: boolean;
   palette: TrackPalette;
 }
 
@@ -104,6 +106,7 @@ export const VALLE_SOLAR: TrackDef = {
   banking: 0.6,
   checkpointCount: 8,
   seed: 20261106,
+  night: false,
   medals: { gold: 52_500, silver: 59_000, bronze: 72_000 },
   scenery: [
     {
@@ -175,6 +178,7 @@ export const CUMBRE: TrackDef = {
   banking: 0.9,
   checkpointCount: 9,
   seed: 31415926,
+  night: false,
   medals: { gold: 65_500, silver: 73_500, bronze: 89_500 },
   scenery: [
     { kind: 'pine', count: 260, minDistance: 4, maxDistance: 130, scaleMin: 0.8, scaleMax: 1.6 },
@@ -237,6 +241,7 @@ export const PUERTO_NEON: TrackDef = {
   banking: 0,
   checkpointCount: 8,
   seed: 27182818,
+  night: true,
   medals: { gold: 53_000, silver: 60_500, bronze: 75_000 },
   scenery: [
     { kind: 'building', count: 190, minDistance: 3, maxDistance: 70, scaleMin: 0.8, scaleMax: 1.5 },

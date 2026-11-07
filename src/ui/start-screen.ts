@@ -19,9 +19,22 @@ export class StartScreen {
     const controls = el(
       'dl',
       { className: 'controls-list' },
-      TEXTS.start.controls.flatMap(([keys, action]) => [
+      TEXTS.start.controls.flatMap(([keys, action, pad]) => [
         el('dt', {}, [el('kbd', { text: keys })]),
         el('dd', { text: action }),
+        // Botón del mando equivalente, con su nombre accesible (no solo la abreviatura).
+        el(
+          'dd',
+          { className: 'pad-button' },
+          pad
+            ? [
+                el('kbd', {
+                  text: pad,
+                  attrs: { 'aria-label': `${TEXTS.start.gamepadLabel}: ${pad}` },
+                }),
+              ]
+            : [],
+        ),
       ]),
     );
     const reduced = toggle(TEXTS.settings.reducedMotion, reducedMotion, actions.onReducedMotion);
@@ -33,7 +46,13 @@ export class StartScreen {
         el('h1', { className: 'title', text: META.title, attrs: { id: 'start-title' } }),
         el('p', { className: 'subtitle', text: TEXTS.start.subtitle }),
         el('div', { className: 'start-columns' }, [
-          el('div', {}, [el('h2', { text: TEXTS.start.controlsTitle }), controls]),
+          el('div', {}, [
+            el('h2', { text: TEXTS.start.controlsTitle }),
+            el('div', { className: 'controls-head', attrs: { 'aria-hidden': 'true' } }, [
+              el('span', { text: TEXTS.start.gamepadLabel }),
+            ]),
+            controls,
+          ]),
           el('div', {}, [
             el('h2', { text: TEXTS.start.rulesTitle }),
             el('p', { text: TEXTS.start.rules }),

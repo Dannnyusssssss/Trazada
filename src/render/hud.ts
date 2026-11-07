@@ -7,11 +7,14 @@ import { Minimap } from './minimap';
 import { stepsToMs } from '../game/race';
 
 /**
- * HUD en DOM sobre el canvas: vuelta, tiempos, velocidad, cuenta atrás, contramano y aviso de vuelta.
- * Solo lee el estado del juego; nunca lo modifica.
+ * HUD en DOM sobre el canvas: posición (en Carrera), vuelta, tiempos, velocidad, cuenta atrás, contramano,
+ * derrape y aviso de vuelta. Solo lee el estado del juego; nunca lo modifica.
  */
 export class Hud {
   readonly root: HTMLElement;
+  private readonly positionRow: HTMLElement;
+  private readonly positionValue: HTMLElement;
+  private readonly drift: HTMLElement;
   private readonly lapValue: HTMLElement;
   private readonly timeValue: HTMLElement;
   private readonly lastValue: HTMLElement;
@@ -38,6 +41,10 @@ export class Hud {
         value,
       ];
     };
+    const [positionRow, positionValue] = row(TEXTS.hud.position);
+    this.positionRow = positionRow;
+    this.positionValue = positionValue;
+    this.positionValue.classList.add('hud-position');
     const [lapRow, lapValue] = row(TEXTS.hud.lap);
     const [timeRow, timeValue] = row(TEXTS.hud.time);
     const [lastRow, lastValue] = row(TEXTS.hud.last);
@@ -68,9 +75,12 @@ export class Hud {
       attrs: { role: 'alert' },
     });
     this.lapMessage = el('div', { className: 'hud-banner', attrs: { 'aria-live': 'polite' } });
+    // Indicador fijo de derrape (la señal visual del chirrido de neumáticos); aparece y se va sin parpadear.
+    this.drift = el('div', { className: 'hud-panel hud-drift', text: `≈ ${TEXTS.hud.drift}` });
 
     this.root = el('div', { className: 'hud' }, [
       el('div', { className: 'hud-panel hud-times' }, [
+        positionRow,
         lapRow,
         timeRow,
         lastRow,
@@ -83,10 +93,13 @@ export class Hud {
         el('div', { className: 'hud-panel hud-hint', text: TEXTS.hud.keysHint }),
       ]),
       speed,
+      this.drift,
       el('div', { className: 'hud-center' }, [this.countdown, this.wrongWay, this.lapMessage]),
     ]);
     setVisible(this.wrongWay, false);
     setVisible(this.lapMessage, false);
+    setVisible(this.drift, false);
+    setVisible(this.positionRow, false);
   }
 
   setMuted(muted: boolean): void {
@@ -105,8 +118,19 @@ export class Hud {
    * Actualiza el HUD. `ghostDeltaMs` es la diferencia con el fantasma en el mismo punto de la vuelta
    * (negativa = vas por delante) o null si no hay fantasma o aún no se puede comparar.
    */
-  update(world: World, speed: number, ghostDeltaMs: number | null): void {
+  update(world: World, speed: number, ghostDeltaMs: number | null, drifting: boolean): void {
     const race = world.race;
+    const racing = world.mode === 'race';
+    setVisible(this.positionRow, racing);
+    if (racing) {
+      setText(
+        this.positionValue,
+        race.phase === 'finished'
+          ? `${TEXTS.hud.finished} · ${world.positionOf(world.player)}/${world.racers.length}`
+          : `${world.positionOf(world.player)}/${world.racers.length}`,
+      );
+    }
+    setVisible(this.drift, drifting);
     setText(this.lapValue, `${race.lap}/${race.totalLaps}`);
     setVisible(this.ghostRow, ghostDeltaMs !== null);
     if (ghostDeltaMs !== null) {

@@ -1,17 +1,7 @@
-import { resetControls } from '../../core/input';
 import { stepCar } from '../car';
 import type { System } from '../world';
 
-/** Física del coche. Durante la cuenta atrás el coche no responde a los controles. */
-export const carPhysicsSystem: System = (world, input, dt) => {
-  const controls = world.appliedControls;
-  if (world.race.phase === 'racing') {
-    controls.throttle = input.controls.throttle;
-    controls.brake = input.controls.brake;
-    controls.steer = input.controls.steer;
-    controls.handbrake = input.controls.handbrake;
-  } else {
-    resetControls(controls);
-  }
-  stepCar(world.car, world.params, controls, dt);
+/** Física de todos los coches con los controles decididos en este paso. */
+export const carPhysicsSystem: System = (world, _input, dt) => {
+  for (const racer of world.racers) stepCar(racer.car, racer.params, racer.controls, dt);
 };

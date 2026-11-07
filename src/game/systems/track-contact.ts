@@ -1,7 +1,9 @@
 import { resolveTrackContact } from '../car';
 import type { System } from '../world';
 
-/** Superficie bajo el coche y choque con los muros. */
+/** Superficie bajo cada coche y choque con los muros. */
 export const trackContactSystem: System = (world, _input, dt) => {
-  resolveTrackContact(world.car, world.params, world.track, world.query, dt);
+  for (const racer of world.racers) {
+    resolveTrackContact(racer.car, racer.params, world.track, racer.query, dt);
+  }
 };

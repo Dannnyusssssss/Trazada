@@ -1,4 +1,14 @@
-import { CAMERA, RACE, type Quality } from '../data/balance';
+import {
+  AUDIO,
+  CAMERA,
+  DIFFICULTIES,
+  GRID,
+  RACE,
+  type Difficulty,
+  type Quality,
+} from '../data/balance';
+import { defaultAssists, type AssistSettings } from '../game/assists';
+import type { GameMode } from '../game/world';
 import { META, SAVE_KEY } from '../data/meta';
 
 /**
@@ -17,12 +27,23 @@ export interface Settings {
   /** Última selección de circuito y coche (ids; se comprueba al usarlos que existan). */
   lastTrackId: string;
   lastCarId: string;
+  /** Último modo y dificultad elegidos. */
+  mode: GameMode;
+  difficulty: Difficulty;
+  /** Volumen general (0–100). */
+  volume: number;
+  /** Música generativa activada. */
+  music: boolean;
+  /** Asistencias de conducción. */
+  assists: AssistSettings;
 }
 
 export interface SaveData {
   settings: Settings;
   /** Mejor vuelta (ms) por circuito y coche: bestLaps[circuito][coche]. */
   bestLaps: Record<string, Record<string, number>>;
+  /** Mejor posición final (1–6) en el modo Carrera por circuito y dificultad: raceBest[circuito][dificultad]. */
+  raceBest: Record<string, Partial<Record<Difficulty, number>>>;
 }
 
 /** Lo mínimo de la API Storage que se usa (permite probar con un almacenamiento falso). */
@@ -47,13 +68,27 @@ export function defaultSave(prefersReducedMotion: boolean): SaveData {
       camera: 'chase',
       lastTrackId: 'valle-solar',
       lastCarId: 'gorrion',
+      mode: 'timeTrial',
+      difficulty: 'normal',
+      volume: AUDIO.defaultVolume,
+      music: true,
+      assists: defaultAssists(),
     },
     bestLaps: {},
+    raceBest: {},
   };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isDifficulty(value: unknown): value is Difficulty {
+  return typeof value === 'string' && (DIFFICULTIES as readonly string[]).includes(value);
+}
+
+function validPosition(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= GRID.slots;
 }
 
 function validLapMs(value: unknown): value is number {
@@ -67,7 +102,11 @@ function validLapMs(value: unknown): value is number {
 
 /** Interpreta el texto guardado. Nunca lanza: ante cualquier problema usa los valores por defecto. */
 export function parseSave(raw: string | null, defaults: SaveData): SaveData {
-  const result: SaveData = { settings: { ...defaults.settings }, bestLaps: {} };
+  const result: SaveData = {
+    settings: { ...defaults.settings, assists: { ...defaults.settings.assists } },
+    bestLaps: {},
+    raceBest: {},
+  };
   if (raw === null || raw.length === 0 || raw.length > MAX_RAW_LENGTH) return result;
   let data: unknown;
   try {
@@ -108,6 +147,22 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
     if (typeof settings.lastCarId === 'string' && ID_PATTERN.test(settings.lastCarId)) {
       result.settings.lastCarId = settings.lastCarId;
     }
+    // Campos añadidos en el Hito 3.
+    if (settings.mode === 'timeTrial' || settings.mode === 'race')
+      result.settings.mode = settings.mode;
+    if (isDifficulty(settings.difficulty)) result.settings.difficulty = settings.difficulty;
+    const volume = settings.volume;
+    if (typeof volume === 'number' && Number.isFinite(volume) && volume >= 0 && volume <= 100) {
+      result.settings.volume = Math.round(volume);
+    }
+    if (typeof settings.music === 'boolean') result.settings.music = settings.music;
+    const assists = settings.assists;
+    if (isRecord(assists)) {
+      for (const key of ['steering', 'braking', 'autoRespawn'] as const) {
+        const value = assists[key];
+        if (typeof value === 'boolean') result.settings.assists[key] = value;
+      }
+    }
   }
 
   const bestLaps = data.bestLaps;
@@ -130,6 +185,28 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
       }
     }
   }
+
+  const raceBest = data.raceBest;
+  if (isRecord(raceBest)) {
+    let tracks = 0;
+    for (const [trackId, entry] of Object.entries(raceBest)) {
+      if (tracks >= MAX_TRACKS) break;
+      if (!ID_PATTERN.test(trackId) || !isRecord(entry)) continue;
+      const clean: Partial<Record<Difficulty, number>> = {};
+      let count = 0;
+      for (const difficulty of DIFFICULTIES) {
+        const position = entry[difficulty];
+        if (validPosition(position)) {
+          clean[difficulty] = position;
+          count++;
+        }
+      }
+      if (count > 0) {
+        result.raceBest[trackId] = clean;
+        tracks++;
+      }
+    }
+  }
   return result;
 }
 
@@ -138,6 +215,7 @@ export function serializeSave(data: SaveData): string {
     version: META.saveVersion,
     settings: data.settings,
     bestLaps: data.bestLaps,
+    raceBest: data.raceBest,
   });
 }
 
@@ -182,6 +260,24 @@ export class SaveStore {
     const entry = this.data.bestLaps[trackId] ?? {};
     entry[carId] = ms;
     this.data.bestLaps[trackId] = entry;
+    this.save();
+    return true;
+  }
+
+  getRaceBest(trackId: string, difficulty: Difficulty): number | null {
+    return this.data.raceBest[trackId]?.[difficulty] ?? null;
+  }
+
+  /** Registra una posición final de Carrera si mejora la anterior. Devuelve true si era la mejor. */
+  recordRacePosition(trackId: string, difficulty: Difficulty, position: number): boolean {
+    if (!validPosition(position) || !ID_PATTERN.test(trackId) || !isDifficulty(difficulty)) {
+      return false;
+    }
+    const current = this.getRaceBest(trackId, difficulty);
+    if (current !== null && current <= position) return false;
+    const entry = this.data.raceBest[trackId] ?? {};
+    entry[difficulty] = position;
+    this.data.raceBest[trackId] = entry;
     this.save();
     return true;
   }

@@ -9,7 +9,8 @@ no consumen CPU. Cualquier otro valor o parámetro se ignora.
 
 ## Panel de física
 
-- Cada parámetro del coche tiene un campo numérico. El cambio se aplica al instante al coche en pista.
+- Cada parámetro del coche tiene un campo numérico. El cambio se aplica al instante al coche del jugador; los rivales del modo Carrera conservan los valores de `src/data/cars.ts`.
+- El panel muestra siempre los datos del coche del jugador.
 - "Restablecer" vuelve a los valores de `src/data/cars.ts`.
 - "Copiar valores" muestra en el panel el objeto con los valores actuales para pegarlo en `src/data/cars.ts`.
 - Los cambios no se guardan: al recargar se usan los valores de `src/data/cars.ts`.

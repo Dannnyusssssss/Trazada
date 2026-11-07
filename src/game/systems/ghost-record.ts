@@ -2,10 +2,11 @@ import { GHOST_STEP } from '../ghost';
 import type { System } from '../world';
 
 /**
- * Grabación del fantasma: empieza con la salida, toma una muestra cada GHOST_STEP pasos de vuelta y,
- * al completar una vuelta, deja la grabación en `world.lastGhost` y empieza la siguiente.
+ * Grabación del fantasma (solo contrarreloj): empieza con la salida, toma una muestra cada GHOST_STEP pasos
+ * de vuelta y, al completar una vuelta, deja la grabación en `world.lastGhost` y empieza la siguiente.
  */
 export const ghostRecordSystem: System = (world) => {
+  if (world.mode !== 'timeTrial') return;
   const race = world.race;
   const recorder = world.recorder;
   if (world.lapCompletedThisStep) {
