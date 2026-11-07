@@ -113,6 +113,9 @@ export const TEXTS = {
     quality: 'Calidad gráfica',
     qualityOptions: { low: 'Baja', medium: 'Media', high: 'Alta' },
     qualityHint: 'Baja: menos resolución y escenario. Alta: añade sombras.',
+    dynamicResolution: 'Resolución dinámica',
+    dynamicResolutionHint:
+      'Si el juego va lento durante unos segundos, baja un poco la resolución para mantener la fluidez. Cambiar la calidad la devuelve a la completa.',
     camera: 'Cámara',
     cameraOptions: { chase: 'Detrás del coche', high: 'Alta' },
     cameraHint: 'También se cambia con la tecla C durante la carrera.',
@@ -149,6 +152,9 @@ export const TEXTS = {
     contextLostTitle: 'Gráficos en pausa',
     contextLost:
       'El navegador detuvo los gráficos un momento. El juego volverá en pausa en cuanto se recuperen.',
+    unexpectedTitle: 'Algo ha fallado',
+    unexpected:
+      'El juego encontró un error inesperado y se detuvo. Recarga la página para volver a jugar: tus ajustes y récords guardados se conservan.',
   },
   debug: {
     title: 'Depuración',

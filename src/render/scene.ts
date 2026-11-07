@@ -14,6 +14,16 @@ export interface RendererCallbacks {
   onResize: () => void;
 }
 
+/** Datos del render para el panel de depuración. */
+export interface RenderStats {
+  calls: number;
+  triangles: number;
+  /** Pixel ratio efectivo (calidad × escala dinámica). */
+  pixelRatio: number;
+  geometries: number;
+  textures: number;
+}
+
 /**
  * Renderer WebGL, escena y cámara. Ajusta el canvas al tamaño de su contenedor y respeta
  * `devicePixelRatio` con un tope. Si WebGL no está disponible, el constructor lanza un error.
@@ -23,8 +33,11 @@ export class GameRenderer {
   readonly scene = new Scene();
   readonly camera: PerspectiveCamera;
   private readonly resizeObserver: ResizeObserver;
-  private dprQuery: MediaQueryList | null = null;
+  /** devicePixelRatio con el que se ajustó el canvas la última vez. */
+  private lastDevicePixelRatio = 0;
   private contextLost = false;
+  /** Escala de la resolución interna (resolución dinámica); 1 = la del ajuste de calidad. */
+  private renderScale = 1;
 
   constructor(
     private readonly container: HTMLElement,
@@ -57,7 +70,6 @@ export class GameRenderer {
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
-    this.watchPixelRatio();
     this.resize();
   }
 
@@ -70,6 +82,13 @@ export class GameRenderer {
     this.resize();
   }
 
+  /** Cambia la escala de la resolución interna (el canvas sigue ocupando el mismo espacio). */
+  setRenderScale(scale: number): void {
+    if (!Number.isFinite(scale) || scale <= 0 || scale === this.renderScale) return;
+    this.renderScale = Math.min(scale, 1);
+    this.resize();
+  }
+
   setFov(fov: number): void {
     this.camera.fov = fov;
     this.camera.updateProjectionMatrix();
@@ -78,7 +97,8 @@ export class GameRenderer {
   resize(): void {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
-    const dpr = Math.min(window.devicePixelRatio || 1, this.maxPixelRatio);
+    this.lastDevicePixelRatio = window.devicePixelRatio || 1;
+    const dpr = Math.min(this.lastDevicePixelRatio, this.maxPixelRatio) * this.renderScale;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
@@ -92,10 +112,12 @@ export class GameRenderer {
   }
 
   /** Llamadas de dibujo del último frame y recursos en memoria de la GPU (para el panel de depuración). */
-  get stats(): { calls: number; geometries: number; textures: number } {
+  get stats(): RenderStats {
     const info = this.renderer.info;
     return {
       calls: info.render.calls,
+      triangles: info.render.triangles,
+      pixelRatio: this.renderer.getPixelRatio(),
       geometries: info.memory.geometries,
       textures: info.memory.textures,
     };
@@ -107,15 +129,11 @@ export class GameRenderer {
     this.renderer.shadowMap.type = PCFShadowMap;
   }
 
-  /** Detecta cambios de devicePixelRatio (mover la ventana a otro monitor o hacer zoom). */
-  private watchPixelRatio(): void {
-    this.dprQuery?.removeEventListener('change', this.onPixelRatioChange);
-    this.dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
-    this.dprQuery.addEventListener('change', this.onPixelRatioChange);
+  /**
+   * Reajusta el canvas si cambió el devicePixelRatio (mover la ventana a otro monitor o hacer zoom). Se llama
+   * en cada frame: es una comparación de números, y no todos los navegadores avisan del cambio con un evento.
+   */
+  checkPixelRatio(): void {
+    if ((window.devicePixelRatio || 1) !== this.lastDevicePixelRatio) this.resize();
   }
-
-  private readonly onPixelRatioChange = (): void => {
-    this.resize();
-    this.watchPixelRatio();
-  };
 }

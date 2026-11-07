@@ -11,9 +11,9 @@ export interface RivalDef {
 }
 
 export const RIVALS: readonly RivalDef[] = [
-  { carId: 'condor', bodyColor: 0x47b85a, colorName: 'verde' },
+  { carId: 'vencejo', bodyColor: 0x47b85a, colorName: 'verde' },
   { carId: 'zorro', bodyColor: 0x8e5bd6, colorName: 'violeta' },
   { carId: 'gorrion', bodyColor: 0x2fc4b2, colorName: 'turquesa' },
-  { carId: 'condor', bodyColor: 0xe9e4d8, colorName: 'blanco' },
+  { carId: 'vencejo', bodyColor: 0xe9e4d8, colorName: 'blanco' },
   { carId: 'zorro', bodyColor: 0xf2d23a, colorName: 'amarillo' },
 ];

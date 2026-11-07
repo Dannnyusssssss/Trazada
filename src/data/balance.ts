@@ -391,6 +391,26 @@ export const RENDER = {
   shadowArea: 90,
 } as const;
 
+/**
+ * Resolución dinámica: si los FPS se mantienen por debajo de `minFps`, la resolución interna baja un escalón.
+ * Solo baja (nunca sube sola) para que la imagen no cambie de nitidez una y otra vez; vuelve a 1 al cambiar
+ * la calidad o al desactivar la opción.
+ */
+export const DYNAMIC_RESOLUTION = {
+  /** Escalones de la escala de resolución interna (fracción del pixel ratio de la calidad). */
+  scales: [1, 0.85, 0.7, 0.6],
+  /** FPS por debajo de los cuales una ventana de medición cuenta como lenta. */
+  minFps: 50,
+  /** Duración de cada ventana de medición (s). */
+  windowSeconds: 0.5,
+  /** Tiempo lento seguido necesario para bajar un escalón (s). */
+  sustainSeconds: 3,
+  /** Tiempo que se ignora tras empezar a medir o tras un cambio, mientras la imagen se estabiliza (s). */
+  settleSeconds: 2,
+  /** Un frame más largo que esto es un tirón aislado (carga, otra pestaña) y no se mide (s). */
+  maxFrameSeconds: 0.25,
+} as const;
+
 export const HUD = {
   /** Tiempo que se muestra el aviso de vuelta completada (s). */
   lapMessageSeconds: 3,

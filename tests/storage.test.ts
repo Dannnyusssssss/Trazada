@@ -63,7 +63,7 @@ describe('parseSave', () => {
       version: 1,
       settings: { muted: 'sí', reducedMotion: true, fov: 1e9 },
       bestLaps: {
-        'valle-solar': { gorrion: 61_234, zorro: Number.NaN, 'MAL ID': 50_000, condor: -5 },
+        'valle-solar': { gorrion: 61_234, zorro: Number.NaN, 'MAL ID': 50_000, vencejo: -5 },
         'otro-circuito': 'no es un objeto',
         'sin-validos': { gorrion: 1 },
       },
@@ -243,5 +243,47 @@ describe('guardado del Hito 3 (modo, dificultad, sonido, ayudas y puestos)', () 
     const reloaded = new SaveStore(storage, defaults);
     expect(reloaded.getRaceBest('valle-solar', 'normal')).toBe(2);
     expect(reloaded.getRaceBest('valle-solar', 'hard')).toBeNull();
+  });
+});
+
+describe('guardado del Hito 4 (resolución dinámica)', () => {
+  it('un guardado del Hito 3 carga con la resolución dinámica activada y escala completa', () => {
+    const old = JSON.stringify({ version: 1, settings: { quality: 'low', music: false } });
+    const data = parseSave(old, defaults);
+    expect(data.settings.quality).toBe('low');
+    expect(data.settings.dynamicResolution).toBe(true);
+    expect(data.settings.renderScale).toBe(1);
+  });
+
+  it('solo acepta escalas conocidas', () => {
+    for (const renderScale of [0.85, 0.7, 0.6]) {
+      const raw = JSON.stringify({
+        version: 1,
+        settings: { renderScale, dynamicResolution: false },
+      });
+      expect(parseSave(raw, defaults).settings).toMatchObject({
+        renderScale,
+        dynamicResolution: false,
+      });
+    }
+    for (const renderScale of [0, 0.01, 2, -1, 'x', null, 1e300, 0.849]) {
+      const raw = JSON.stringify({
+        version: 1,
+        settings: { renderScale, dynamicResolution: 'sí' },
+      });
+      expect(parseSave(raw, defaults).settings).toMatchObject({
+        renderScale: 1,
+        dynamicResolution: true,
+      });
+    }
+  });
+
+  it('con la cuota llena o el almacenamiento bloqueado el juego sigue con los ajustes en memoria', () => {
+    for (const storage of [new FullStorage(), new BlockedStorage()]) {
+      const store = new SaveStore(storage, defaults);
+      expect(() => store.updateSettings({ renderScale: 0.7 })).not.toThrow();
+      expect(store.save()).toBe(false);
+      expect(store.data.settings.renderScale).toBe(0.7);
+    }
   });
 });

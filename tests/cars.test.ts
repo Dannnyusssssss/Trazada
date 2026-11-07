@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createControls } from '../src/core/input';
 import { SIM, STEP_SECONDS } from '../src/data/balance';
-import { CARS, CONDOR, GORRION, ZORRO, carById, type CarDef } from '../src/data/cars';
+import { CARS, VENCEJO, GORRION, ZORRO, carById, type CarDef } from '../src/data/cars';
 import { TRACKS } from '../src/data/tracks';
 import { createCarState, placeCar, stepCar } from '../src/game/car';
 import { Track } from '../src/game/track';
@@ -39,17 +39,17 @@ describe('coches', () => {
 
   it('velocidad punta: Cóndor > Gorrión > Zorro', () => {
     const top = (d: CarDef): number => speedAfter(d, 40);
-    expect(top(CONDOR)).toBeGreaterThan(top(GORRION));
+    expect(top(VENCEJO)).toBeGreaterThan(top(GORRION));
     expect(top(GORRION)).toBeGreaterThan(top(ZORRO));
   });
 
   it('giro: Zorro > Gorrión > Cóndor', () => {
     expect(turnAt20(ZORRO)).toBeGreaterThan(turnAt20(GORRION));
-    expect(turnAt20(GORRION)).toBeGreaterThan(turnAt20(CONDOR));
+    expect(turnAt20(GORRION)).toBeGreaterThan(turnAt20(VENCEJO));
   });
 
   it('Zorro acelera mejor desde parado', () => {
-    expect(speedAfter(ZORRO, 2)).toBeGreaterThan(speedAfter(CONDOR, 2));
+    expect(speedAfter(ZORRO, 2)).toBeGreaterThan(speedAfter(VENCEJO, 2));
   });
 
   for (const trackDef of TRACKS) {

@@ -5,7 +5,8 @@
 export const META = {
   title: 'Trazada',
   slug: 'trazada',
-  description: 'Carreras arcade en 3D low-poly: encuentra la trazada perfecta y bate tus tiempos.',
+  description:
+    'Carreras arcade en 3D low-poly: encuentra la trazada perfecta, bate a tu propio fantasma y gana a los rivales.',
   /** Prefijo de todas las claves de localStorage del juego. */
   storagePrefix: 'trazada:',
   /** Versión del formato de guardado principal. */

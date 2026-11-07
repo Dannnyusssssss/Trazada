@@ -95,9 +95,9 @@ export const GORRION: CarDef = {
   },
 };
 
-export const CONDOR: CarDef = {
-  id: 'condor',
-  name: 'Cóndor',
+export const VENCEJO: CarDef = {
+  id: 'vencejo',
+  name: 'Vencejo',
   description: 'Rápido en recta; gira más despacio y pide frenar antes.',
   bodyColor: 0x3fa7e8,
   accentColor: 0xf4f1e8,
@@ -134,7 +134,7 @@ export const ZORRO: CarDef = {
   },
 };
 
-export const CARS: readonly CarDef[] = [GORRION, CONDOR, ZORRO];
+export const CARS: readonly CarDef[] = [GORRION, VENCEJO, ZORRO];
 
 export function carById(id: string): CarDef | null {
   return CARS.find((c) => c.id === id) ?? null;

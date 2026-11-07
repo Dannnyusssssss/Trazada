@@ -2,7 +2,7 @@
   "name": "trazada",
   "version": "0.1.0",
   "private": true,
-  "description": "Carreras arcade 3D low-poly: contrarreloj contra tu propio fantasma.",
+  "description": "Carreras arcade 3D low-poly: contrarreloj contra tu fantasma y carreras contra rivales.",
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {

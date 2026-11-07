@@ -2,6 +2,7 @@ import {
   AUDIO,
   CAMERA,
   DIFFICULTIES,
+  DYNAMIC_RESOLUTION,
   GRID,
   RACE,
   type Difficulty,
@@ -36,6 +37,10 @@ export interface Settings {
   music: boolean;
   /** Asistencias de conducción. */
   assists: AssistSettings;
+  /** Resolución dinámica activada (baja la resolución interna si los FPS caen de forma sostenida). */
+  dynamicResolution: boolean;
+  /** Escala de resolución interna que dejó la resolución dinámica (1 = completa). */
+  renderScale: number;
 }
 
 export interface SaveData {
@@ -73,6 +78,8 @@ export function defaultSave(prefersReducedMotion: boolean): SaveData {
       volume: AUDIO.defaultVolume,
       music: true,
       assists: defaultAssists(),
+      dynamicResolution: true,
+      renderScale: 1,
     },
     bestLaps: {},
     raceBest: {},
@@ -162,6 +169,17 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
         const value = assists[key];
         if (typeof value === 'boolean') result.settings.assists[key] = value;
       }
+    }
+    // Campos añadidos en el Hito 4. La escala solo se acepta si es uno de los escalones conocidos.
+    if (typeof settings.dynamicResolution === 'boolean') {
+      result.settings.dynamicResolution = settings.dynamicResolution;
+    }
+    const scale = settings.renderScale;
+    if (
+      typeof scale === 'number' &&
+      (DYNAMIC_RESOLUTION.scales as readonly number[]).includes(scale)
+    ) {
+      result.settings.renderScale = scale;
     }
   }
 

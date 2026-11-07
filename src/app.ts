@@ -3,10 +3,20 @@ import { CueTracker, impactLevel, rivalMix, windLevel } from './audio/sfx';
 import { SoundEngine, type SoundFrame } from './audio/web/sound-engine';
 import { mergeControls, padToControls, PadButtons } from './core/gamepad';
 import { createControls, InputState, type Action } from './core/input';
+import { DynamicResolution } from './core/dynamic-resolution';
 import { FixedStepAccumulator } from './core/loop';
 import { lerp, lerpAngle, wrapAngle } from './core/math';
 import { parseDebugFlag } from './core/url';
-import { AUDIO, EFFECTS, HUD, QUALITY, SIM, STEP_SECONDS, type Difficulty } from './data/balance';
+import {
+  AUDIO,
+  DYNAMIC_RESOLUTION,
+  EFFECTS,
+  HUD,
+  QUALITY,
+  SIM,
+  STEP_SECONDS,
+  type Difficulty,
+} from './data/balance';
 import { CARS, carById, type CarDef } from './data/cars';
 import { TEXTS } from './data/texts';
 import { TRACKS, type TrackDef } from './data/tracks';
@@ -54,6 +64,8 @@ interface Pose {
 const DRIFT_HOLD_SECONDS = 0.35;
 /** Derrape mínimo (0..1) que enciende el indicador, deja marcas o suena. */
 const DRIFT_THRESHOLD = 0.25;
+/** Clave de mallas que nunca coincide con una real: obliga a reconstruirlas. */
+const REBUILD_KEY = '#rebuild';
 
 /**
  * Orquesta el juego en el navegador: pantallas, bucle de frames, entrada (teclado y mando), render,
@@ -77,6 +89,8 @@ export class App {
     SIM.maxFrameSeconds,
   );
   private readonly store: SaveStore;
+  /** Decide cuándo bajar la resolución interna si los FPS caen de forma sostenida. */
+  private readonly dynamicResolution: DynamicResolution;
   private readonly ghostStore: GhostStore;
   private readonly gameElement: HTMLElement;
   private readonly overlay: HTMLElement;
@@ -154,6 +168,7 @@ export class App {
     this.ghostStore = new GhostStore(storage);
     const first = this.initialSelection();
     const settings = this.store.data.settings;
+    this.dynamicResolution = new DynamicResolution(DYNAMIC_RESOLUTION, settings.renderScale);
     this.world = this.createWorld(first.track, first.car, settings.mode, settings.difficulty);
 
     this.gameElement = el('div', {
@@ -321,7 +336,9 @@ export class App {
       // (y los faros, si el circuito es nocturno).
       this.carMeshId = '';
       this.ghostMeshCarId = '';
-      this.rivalMeshKey = '';
+      // Una clave imposible fuerza a rehacer las mallas de los rivales. Con '' una contrarreloj (sin rivales)
+      // coincidiría con la clave vacía y dejaría en la escena los coches de la carrera anterior.
+      this.rivalMeshKey = REBUILD_KEY;
       this.hud?.minimap.setTrack(track);
     }
     const night = track.def.night;
@@ -406,11 +423,33 @@ export class App {
   // Bucle de frames
 
   private readonly frame = (now: number): void => {
+    try {
+      this.runFrame(now);
+    } catch (error) {
+      // Un error inesperado no deja la imagen congelada sin explicación: se detiene el bucle y se avisa.
+      this.fail(error);
+      return;
+    }
     requestAnimationFrame(this.frame);
+  };
+
+  /** Detiene el juego y muestra un mensaje claro. El error queda en la consola para poder diagnosticarlo. */
+  fail(error: unknown): void {
+    console.error(error);
+    if (this.screen === 'fatal') return;
+    this.screen = 'fatal';
+    this.hideScreens();
+    if (this.hud) setVisible(this.hud.root, false);
+    this.sound.setPaused(true);
+    this.message.show(TEXTS.errors.unexpectedTitle, TEXTS.errors.unexpected);
+  }
+
+  private runFrame(now: number): void {
     const renderer = this.renderer;
     if (!renderer) return;
     const dt = this.lastFrame === 0 ? 0 : (now - this.lastFrame) / 1000;
     this.lastFrame = now;
+    renderer.checkPixelRatio();
     this.pollGamepad();
 
     if (this.screen === 'playing' && !this.contextLost) {
@@ -433,12 +472,27 @@ export class App {
       }
       this.afterSteps();
       this.needsRender = true;
+      this.updateDynamicResolution(dt);
     }
     const frameDt = Math.min(dt, SIM.maxFrameSeconds);
     if (this.needsRender && !this.contextLost) this.draw(frameDt);
     this.updateSound(frameDt);
-    this.debug?.update(now, dt, renderer.stats);
-  };
+    this.debug?.update(now, dt, renderer.stats, this.effectiveRenderScale());
+  }
+
+  /** Escala de resolución que se aplica: la guardada si la resolución dinámica está activa, si no 1. */
+  private effectiveRenderScale(): number {
+    const settings = this.store.data.settings;
+    return settings.dynamicResolution ? settings.renderScale : 1;
+  }
+
+  /** Mide el frame y, si los FPS llevan un rato bajos, baja la resolución interna y lo guarda. */
+  private updateDynamicResolution(dt: number): void {
+    if (!this.store.data.settings.dynamicResolution) return;
+    if (!this.dynamicResolution.update(dt)) return;
+    this.store.updateSettings({ renderScale: this.dynamicResolution.scale });
+    this.renderer?.setRenderScale(this.effectiveRenderScale());
+  }
 
   /** Lee el mando (solo si hay uno conectado) y reparte sus controles y sus botones de un disparo. */
   private pollGamepad(): void {
@@ -849,6 +903,8 @@ export class App {
     this.input.clear();
     this.padButtons.clear();
     this.accumulator.reset();
+    // La medición de FPS empieza de cero: el tiempo en menús o en pausa no cuenta.
+    this.dynamicResolution.restart();
     this.needsRender = true;
     this.updateAudioState();
     this.gameElement.focus({ preventScroll: true });
@@ -976,6 +1032,10 @@ export class App {
   }
 
   private changeSettings(patch: Partial<Settings>): void {
+    // Cambiar la calidad o apagar la resolución dinámica devuelve la resolución interna a la completa.
+    if (patch.quality !== undefined || patch.dynamicResolution === false) {
+      patch = { ...patch, renderScale: 1 };
+    }
     this.store.updateSettings(patch);
     this.applySettings();
     if (patch.quality !== undefined) this.ensureScene();
@@ -989,6 +1049,8 @@ export class App {
   private applySettings(): void {
     const settings = this.store.data.settings;
     this.renderer?.setFov(settings.fov);
+    this.dynamicResolution.setScale(settings.renderScale);
+    this.renderer?.setRenderScale(this.effectiveRenderScale());
     this.hud?.setMuted(settings.muted);
     this.chase?.setMode(settings.camera, settings.reducedMotion);
     this.world.assists = { ...settings.assists };
@@ -1001,12 +1063,14 @@ export class App {
 
   private onContextLost(): void {
     this.contextLost = true;
+    if (this.screen === 'fatal') return;
     this.pause(false);
     this.message.show(TEXTS.errors.contextLostTitle, TEXTS.errors.contextLost);
   }
 
   private onContextRestored(): void {
     this.contextLost = false;
+    if (this.screen === 'fatal') return;
     this.message.hide();
     this.needsRender = true;
   }

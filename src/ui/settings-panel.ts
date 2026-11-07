@@ -27,7 +27,7 @@ function radioGroup<T extends string>(
 }
 
 /**
- * Panel de ajustes: "Reducir movimiento", campo de visión, calidad gráfica, cámara, sonido (silencio,
+ * Panel de ajustes: "Reducir movimiento", campo de visión, calidad gráfica, resolución dinámica, cámara, sonido (silencio,
  * volumen y música) y ayudas de conducción. Los cambios se aplican al momento.
  */
 export class SettingsPanel {
@@ -37,6 +37,7 @@ export class SettingsPanel {
   private readonly fov: HTMLInputElement;
   private readonly fovValue: HTMLElement;
   private readonly quality: Map<Quality, HTMLInputElement>;
+  private readonly dynamicResolution: HTMLInputElement;
   private readonly camera: Map<'chase' | 'high', HTMLInputElement>;
   private readonly volume: HTMLInputElement;
   private readonly volumeValue: HTMLElement;
@@ -94,6 +95,13 @@ export class SettingsPanel {
     );
     this.quality = quality.inputs;
     this.camera = camera.inputs;
+    const dynamic = toggle(
+      TEXTS.settings.dynamicResolution,
+      true,
+      (on) => onChange({ dynamicResolution: on }),
+      TEXTS.settings.dynamicResolutionHint,
+    );
+    this.dynamicResolution = dynamic.input;
 
     this.volume = el('input', {
       attrs: { type: 'range', min: '0', max: '100', step: '5', id: 'volume-input' },
@@ -153,6 +161,7 @@ export class SettingsPanel {
           this.fovValue,
         ]),
         quality.root,
+        dynamic.root,
         camera.root,
         mute.root,
         el('div', { className: 'range' }, [
@@ -179,6 +188,7 @@ export class SettingsPanel {
     setText(this.fovValue, `${settings.fov}${TEXTS.settings.fovUnit}`);
     const q = this.quality.get(settings.quality);
     if (q) q.checked = true;
+    this.dynamicResolution.checked = settings.dynamicResolution;
     const c = this.camera.get(settings.camera);
     if (c) c.checked = true;
     this.volume.value = String(settings.volume);

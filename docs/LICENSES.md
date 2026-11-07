@@ -5,7 +5,11 @@
 Código, arte procedural, textos y sonido de Trazada: **Todos los derechos reservados. Titular: Danny Sivinta.**
 
 El juego no usa recursos externos: la geometría se genera por código, las texturas se dibujan con Canvas y el
-sonido (a partir del Hito 3) se sintetiza con WebAudio. El favicon se genera por código.
+sonido se sintetiza con WebAudio. El favicon se genera por código.
+
+La portada (`public/cover.png`, 1280×720) es una captura del propio juego (parrilla de salida en Puerto Neón) con
+el título y un subtítulo superpuestos. El texto se dibujó con una fuente del sistema y forma parte de la imagen:
+no se incluye ni se distribuye ningún archivo de fuente.
 
 ## Dependencias de ejecución (se empaquetan en `dist/`)
 
@@ -29,3 +33,13 @@ El aviso de licencia MIT de Three.js (Copyright © 2010-2026 three.js authors) s
 | @types/three | 0.187.0 | MIT | Tipos de Three.js |
 
 Las dependencias transitivas se instalan desde `package-lock.json`.
+
+## Acciones de GitHub (solo para el despliegue, no se publican en `dist/`)
+
+| Acción | Versión | Licencia |
+|---|---|---|
+| actions/checkout | v7 | MIT |
+| actions/setup-node | v7 | MIT |
+| actions/upload-pages-artifact | v5 | MIT |
+| actions/configure-pages | v6 | MIT |
+| actions/deploy-pages | v5 | MIT |
