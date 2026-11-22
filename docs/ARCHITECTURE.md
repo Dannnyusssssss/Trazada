@@ -79,7 +79,7 @@ La idea central es separar la simulación, que es lógica pura y determinista, d
 
 ## Pruebas
 
-Las pruebas usan Vitest y cubren la lógica pura: física del coche, pista, vueltas y checkpoints, fantasma, rivales, colisiones, asistencias, mando, audio lógico, datos de circuitos y persistencia (incluidos guardados corruptos). El render y el audio real no se prueban. Los tests de recorrido (`tests/race-mode.test.ts`, `tests/world.test.ts`, `tests/cars.test.ts`) usan el piloto automático de `tests/helpers/autopilot.ts` para completar vueltas por cada circuito. El flujo de integración continua (`.github/workflows/deploy.yml`) ejecuta la auditoría de dependencias, una búsqueda de secretos, lint, pruebas y build antes de publicar.
+Las pruebas usan Vitest y cubren la lógica pura: física del coche, pista, vueltas y checkpoints, fantasma, rivales, colisiones, asistencias, mando, audio lógico, datos de circuitos y persistencia (incluidos guardados corruptos). El render y el audio real no se prueban. Los tests de recorrido (`tests/race-mode.test.ts`, `tests/world.test.ts`, `tests/cars.test.ts`) usan el piloto automático de `tests/helpers/autopilot.ts` para completar vueltas por cada circuito. El flujo de integración continua (`.github/workflows/deploy.yml`) ejecuta la auditoría de dependencias, una comprobación de claves expuestas, lint, pruebas y build antes de publicar.
 
 ## Cómo se extiende
 
