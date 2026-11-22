@@ -7,8 +7,10 @@ fantasma en la contrarreloj y gana carreras contra cinco rivales.
 
 ## Cómo se juega
 
-- **Contrarreloj:** 3 vueltas contra el reloj y contra tu fantasma (tu mejor vuelta en ese circuito). Según tu
-  tiempo ganas una medalla de bronce, plata u oro, y las medallas abren los siguientes circuitos.
+- **Contrarreloj:** 3 vueltas contra el reloj y contra tu fantasma (tu mejor vuelta en ese circuito). El
+  fantasma sale desde la segunda vuelta, cuando los dos vais lanzados: en la primera arrancas parado y la
+  comparación no sería justa. Según tu tiempo ganas una medalla de bronce, plata u oro, y las medallas abren los
+  siguientes circuitos.
 - **Carrera:** 3 vueltas contra 5 rivales, con dificultad Fácil, Normal o Difícil. Los rivales usan la misma
   física que tú.
 - Cada vuelta solo cuenta si pasas por todos los controles del circuito en orden.

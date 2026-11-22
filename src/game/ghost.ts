@@ -94,6 +94,14 @@ export function validateGhost(data: GhostData, track: Track): boolean {
   return true;
 }
 
+/**
+ * El fantasma solo corre desde la segunda vuelta. Suele ser una vuelta lanzada (la 2.ª o la 3.ª) y sale
+ * de la meta ya con velocidad: en la primera, que empieza parada, la comparación no sería justa.
+ */
+export function ghostRunsOnLap(lapsCompleted: number): boolean {
+  return lapsCompleted >= 1;
+}
+
 export interface GhostPose {
   x: number;
   z: number;

@@ -129,9 +129,16 @@ export class Hud {
 
   /**
    * Actualiza el HUD. `ghostDeltaMs` es la diferencia con el fantasma en el mismo punto de la vuelta
-   * (negativa = vas por delante) o null si no hay fantasma o aún no se puede comparar.
+   * (negativa = vas por delante) o null si no hay fantasma o aún no se puede comparar. `ghostWaiting`
+   * indica que hay fantasma pero todavía no corre (solo lo hace desde la segunda vuelta).
    */
-  update(world: World, speed: number, ghostDeltaMs: number | null, drifting: boolean): void {
+  update(
+    world: World,
+    speed: number,
+    ghostDeltaMs: number | null,
+    ghostWaiting: boolean,
+    drifting: boolean,
+  ): void {
     const race = world.race;
     const racing = world.mode === 'race';
     setVisible(this.positionRow, racing);
@@ -146,8 +153,11 @@ export class Hud {
     setVisible(this.drift, drifting);
     setVisible(this.tunedNotice, world.tuned);
     setText(this.lapValue, `${race.lap}/${race.totalLaps}`);
-    setVisible(this.ghostRow, ghostDeltaMs !== null);
-    if (ghostDeltaMs !== null) {
+    setVisible(this.ghostRow, ghostDeltaMs !== null || ghostWaiting);
+    if (ghostWaiting) {
+      setText(this.ghostValue, TEXTS.hud.ghostFromLap2);
+      delete this.ghostValue.dataset.trend;
+    } else if (ghostDeltaMs !== null) {
       // Signo y color: el signo basta para entenderlo sin distinguir colores.
       setText(this.ghostValue, formatDelta(ghostDeltaMs));
       this.ghostValue.dataset.trend = ghostDeltaMs < 0 ? 'ahead' : 'behind';

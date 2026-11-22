@@ -7,6 +7,7 @@ import {
   GHOST_MAX_SAMPLES,
   GhostPlayer,
   expectedSamples,
+  ghostRunsOnLap,
   sampleCount,
   validateGhost,
   type GhostData,
@@ -176,5 +177,13 @@ describe('guardado del fantasma', () => {
     expect(store.save(ghost)).toBe(false);
     expect(store.load(VALLE_SOLAR.id)).toBeNull();
     expect(new GhostStore(null).save(ghost)).toBe(false);
+  });
+});
+
+describe('ghostRunsOnLap', () => {
+  it('el fantasma no corre en la primera vuelta (salida parada) y sí desde la segunda', () => {
+    expect(ghostRunsOnLap(0)).toBe(false);
+    expect(ghostRunsOnLap(1)).toBe(true);
+    expect(ghostRunsOnLap(2)).toBe(true);
   });
 });

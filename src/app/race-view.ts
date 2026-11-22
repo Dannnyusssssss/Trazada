@@ -2,7 +2,7 @@ import { lerp, lerpAngle, wrapAngle } from '../core/math';
 import { EFFECTS, HUD, QUALITY, type Quality } from '../data/balance';
 import { carById } from '../data/cars';
 import { BrakeLight, skidIntensity } from '../game/feedback';
-import { GhostPlayer, type GhostData, type GhostPose } from '../game/ghost';
+import { GhostPlayer, ghostRunsOnLap, type GhostData, type GhostPose } from '../game/ghost';
 import { stepsToMs } from '../game/race';
 import type { Racer } from '../game/racer';
 import { createTrackQuery } from '../game/track';
@@ -307,7 +307,7 @@ export class RaceView {
     }
     this.particles?.update(effectsDt);
 
-    // Fantasma: el mismo paso de la vuelta que el jugador, interpolado.
+    // Fantasma: el mismo paso de la vuelta que el jugador, interpolado, y solo desde la segunda vuelta.
     let ghostX: number | null = null;
     let ghostZ: number | null = null;
     const race = world.race;
@@ -315,6 +315,7 @@ export class RaceView {
     const ghostVisible =
       this.ghostPlayer !== null &&
       race.phase === 'racing' &&
+      ghostRunsOnLap(race.lapsCompleted) &&
       this.ghostPlayer.poseAt(ghostStep, this.ghostPose);
     if (this.ghostMesh) {
       this.ghostMesh.setVisible(ghostVisible);
@@ -332,7 +333,18 @@ export class RaceView {
     this.driftHold = drifting ? DRIFT_HOLD_SECONDS : Math.max(0, this.driftHold - effectsDt);
 
     this.trackScene.environment.follow(cam.x, cam.y, cam.z);
-    this.hud.update(world, car.forwardSpeed, this.ghostDelta(world), this.driftHold > 0);
+    // Hay fantasma pero aún no corre (cuenta atrás o primera vuelta): el HUD lo indica.
+    const ghostWaiting =
+      this.ghostPlayer !== null &&
+      (race.phase === 'countdown' || race.phase === 'racing') &&
+      !ghostRunsOnLap(race.lapsCompleted);
+    this.hud.update(
+      world,
+      car.forwardSpeed,
+      this.ghostDelta(world),
+      ghostWaiting,
+      this.driftHold > 0,
+    );
     this.hud.minimap.draw(car.x, car.z, ghostX, ghostZ, this.minimapDots);
     renderer.render();
     return true;
@@ -342,6 +354,7 @@ export class RaceView {
   private ghostDelta(world: World): number | null {
     const race = world.race;
     if (!this.ghostPlayer || race.phase !== 'racing') return null;
+    if (!ghostRunsOnLap(race.lapsCompleted)) return null;
     if (race.lapDistance < HUD.ghostDeltaMinDistance) return null;
     const ghostMs = this.ghostPlayer.timeAtDistance(race.lapDistance);
     return ghostMs === null ? null : stepsToMs(race.lapSteps) - ghostMs;

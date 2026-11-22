@@ -156,6 +156,7 @@ export const TEXTS = {
     last: 'Última',
     best: 'Mejor',
     ghost: 'Fantasma',
+    ghostFromLap2: 'desde la vuelta 2',
     speedUnit: 'km/h',
     emptyTime: '-:--.---',
     go: '¡YA!',
