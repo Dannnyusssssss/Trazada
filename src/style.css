@@ -832,9 +832,13 @@ h3 {
     top: calc(max(12px, env(safe-area-inset-top)) + 104px);
   }
 
-  /* En pantallas muy bajas el minimapa taparía los tiempos: se oculta (no es información crítica). */
+  /* En pantallas bajas (móvil en horizontal) no cabe sobre los botones: va debajo de los tiempos, más
+     pequeño, y queda por encima de la dirección. */
   .is-touch .minimap {
-    display: none;
+    top: calc(max(12px, env(safe-area-inset-top)) + 136px);
+    bottom: auto;
+    transform: scale(0.55);
+    transform-origin: top left;
   }
 
   .panel {

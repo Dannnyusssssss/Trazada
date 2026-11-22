@@ -28,6 +28,7 @@ export class Hud {
   private readonly wrongWay: HTMLElement;
   private readonly lapMessage: HTMLElement;
   private readonly soundButton: HTMLButtonElement;
+  private readonly soundLabel: HTMLElement;
   private lapMessageUntilStep = -1;
   private seenLaps = 0;
 
@@ -64,7 +65,12 @@ export class Hud {
       el('span', { className: 'hud-speed-unit', text: TEXTS.hud.speedUnit }),
     ]);
 
-    this.soundButton = el('button', { className: 'btn btn-small', attrs: { type: 'button' } });
+    // La tecla va aparte para ocultarla con pantalla táctil (clase only-keys).
+    this.soundLabel = el('span');
+    this.soundButton = el('button', { className: 'btn btn-small', attrs: { type: 'button' } }, [
+      this.soundLabel,
+      el('span', { className: 'only-keys', text: TEXTS.hud.soundKey }),
+    ]);
     this.soundButton.addEventListener('click', onToggleSound);
     // El botón no debe quedarse con el foco: el espacio lo pulsaría en vez de usar el freno de mano.
     this.soundButton.tabIndex = -1;
@@ -110,7 +116,7 @@ export class Hud {
   }
 
   setMuted(muted: boolean): void {
-    setText(this.soundButton, muted ? TEXTS.hud.soundOff : TEXTS.hud.soundOn);
+    setText(this.soundLabel, muted ? TEXTS.hud.soundOff : TEXTS.hud.soundOn);
     this.soundButton.setAttribute('aria-pressed', String(muted));
   }
 

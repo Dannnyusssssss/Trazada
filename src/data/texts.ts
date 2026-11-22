@@ -162,8 +162,10 @@ export const TEXTS = {
     wrongWay: '⚠ ¡Contramano! Da la vuelta',
     lapDone: 'Vuelta',
     newBest: '★ ¡Nueva mejor vuelta!',
-    soundOn: 'Sonido: sí (M)',
-    soundOff: 'Sonido: no (M)',
+    soundOn: 'Sonido: sí',
+    soundOff: 'Sonido: no',
+    /** Tecla del botón de sonido; no se muestra con pantalla táctil. */
+    soundKey: ' (M)',
     keysHint: 'Esc: pausa · R: reaparecer · C: cámara',
     position: 'Posición',
     drift: 'Derrape',
