@@ -47,6 +47,8 @@ El juego no recoge datos personales ni se conecta a ningún servidor. Solo guard
 (`localStorage`, claves que empiezan por `trazada:`) los ajustes, el progreso, los mejores tiempos y los
 fantasmas. Borrar los datos del sitio los elimina.
 
+El detalle de lo que se guarda está en [docs/PRIVACY-INVENTORY.md](docs/PRIVACY-INVENTORY.md).
+
 ## Requisitos
 
 Un navegador actual con WebGL activado. Si WebGL no está disponible, el juego lo indica con un mensaje.
@@ -75,7 +77,8 @@ si todo pasa, publica `dist/`. Para activarlo, en el repositorio ve a **Settings
 
 ## Licencia
 
-Código, arte procedural, textos y sonido: **Todos los derechos reservados. Titular: Danny Sivinta.**
+Código, arte procedural, textos y sonido: **Todos los derechos reservados. Titular: Danny Sivinta.** Consulta el
+archivo [LICENSE](LICENSE).
 
 Las dependencias de terceros y sus licencias están en [docs/LICENSES.md](docs/LICENSES.md). Three.js (licencia
 MIT) se incluye en el código publicado junto con su aviso de licencia.
