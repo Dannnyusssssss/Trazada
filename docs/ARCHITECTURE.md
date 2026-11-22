@@ -10,11 +10,11 @@ La idea central es separar la simulación, que es lógica pura y determinista, d
 |---|---|
 | `src/main.ts`, `src/app.ts` | Arranque y orquestador: pantallas, bucle de frames, pausa, ajustes y conexión de las piezas de `src/app/`. |
 | `src/app/` | Piezas del orquestador, cada una con una responsabilidad (ver abajo). |
-| `src/core/` | Utilidades sin dependencias del navegador: bucle de paso fijo (`loop.ts`), generador aleatorio con semilla (`rng.ts`), entrada (`input.ts`, `gamepad.ts`), matemáticas (`math.ts`), resolución dinámica y lectura de la URL. |
-| `src/game/` | Lógica de juego: pista, coche, vueltas y checkpoints, fantasma, conductores rivales (`ai.ts`), colisiones, asistencias, escenario y el mundo (`world.ts`) con sus sistemas en `systems/`. |
+| `src/core/` | Utilidades sin dependencias del navegador: bucle de paso fijo (`loop.ts`), generador aleatorio con semilla (`rng.ts`), entrada (`input.ts`, `gamepad.ts`, `touch.ts`), matemáticas (`math.ts`), resolución dinámica y lectura de la URL. |
+| `src/game/` | Lógica de juego: pista, coche, vueltas y checkpoints, fantasma, conductores rivales (`rival-driver.ts`), colisiones, asistencias, escenario y el mundo (`world.ts`) con sus sistemas en `systems/`. |
 | `src/data/` | Datos tipados: circuitos, coches, rivales, balance, textos y metadatos. |
 | `src/render/` | Todo lo que usa Three.js: escena, mallas de pista, coches y escenario, cámara, partículas, minimapa y HUD. |
-| `src/ui/` | Menús y paneles en el DOM: inicio, selección, resultados, pausa y ajustes. |
+| `src/ui/` | Menús y paneles en el DOM: inicio, selección, resultados, pausa y ajustes, y los botones táctiles (`touch-controls.ts`). |
 | `src/audio/` | Lógica pura del sonido (motor, efectos, música). `src/audio/web/` es el único adaptador a WebAudio. |
 | `src/save/` | Persistencia en `localStorage` con validación (`storage.ts`, `ghost-storage.ts`). |
 | `tests/` | Pruebas de Vitest; `tests/helpers/` contiene el piloto automático. |
@@ -71,7 +71,7 @@ La idea central es separar la simulación, que es lógica pura y determinista, d
 
 - **Física 2D propia.** La simulación ocurre en el plano del suelo, en metros. La altura y la inclinación del coche las pone el render a partir de la pista. No se usa un motor de física: el manejo arcade se controla con parámetros de `src/data/`.
 - **Determinismo.** Todo el tiempo de juego se mide en pasos fijos y la aleatoriedad (rivales, colocación del escenario) sale de un generador con semilla.
-- **Los rivales usan la misma física que el jugador.** Reciben acelerador, freno y dirección calculados desde la pista (`src/game/ai.ts`, `racing-line.ts`), sin ventajas de velocidad.
+- **Los rivales usan la misma física que el jugador.** Reciben acelerador, freno y dirección calculados desde la pista (`src/game/rival-driver.ts`, `racing-line.ts`), sin ventajas de velocidad.
 - **Contenido procedural.** Geometría, texturas (dibujadas en Canvas) y sonidos (síntesis con WebAudio) se generan en código; no hay archivos de modelos, imágenes ni audio.
 - **Datos tipados.** Circuitos, coches, balance y textos viven en `src/data/`, sin números sueltos por el código.
 - **UI en el DOM.** Menús y HUD son HTML sobre el canvas; el minimapa es un canvas 2D pequeño.

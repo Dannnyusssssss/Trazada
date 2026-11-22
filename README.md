@@ -18,18 +18,24 @@ fantasma en la contrarreloj y gana carreras contra cinco rivales.
 
 ## Controles
 
-| Acción | Teclado | Mando |
-|---|---|---|
-| Acelerar | W / ↑ | RT |
-| Frenar y marcha atrás | S / ↓ | LT |
-| Girar | A D / ← → | Stick izquierdo o cruceta |
-| Freno de mano (derrape) | Espacio | A |
-| Reaparecer en el último control | R | Y |
-| Cambiar de cámara | C | X |
-| Pausa | Esc / P | Start |
-| Silenciar | M | — |
+| Acción | Teclado | Mando | Pantalla táctil |
+|---|---|---|---|
+| Acelerar | W / ↑ | RT | Automático (o ▲ si se desactiva) |
+| Frenar y marcha atrás | S / ↓ | LT | ▼ |
+| Girar | A D / ← → | Stick izquierdo o cruceta | ◀ ▶ |
+| Freno de mano (derrape) | Espacio | A | FM |
+| Reaparecer en el último control | R | Y | ↺ |
+| Cambiar de cámara | C | X | CAM |
+| Pausa | Esc / P | Start | II |
+| Silenciar | M | — | Botón «Sonido» |
 
-Los menús se manejan con el teclado (flechas, Tab e Intro) o con el ratón.
+Los menús se manejan con el teclado (flechas, Tab e Intro), con el ratón o tocando la pantalla.
+
+**Pantalla táctil.** Los botones aparecen solo en dispositivos táctiles (o tras el primer toque) y solo durante
+la carrera: dirección a la izquierda y pedales a la derecha. Se pueden usar varios dedos a la vez. En Ajustes →
+«Controles táctiles» se elige la aceleración automática (activada por defecto), el modo zurdo (dirección a la
+derecha), el tamaño de los botones (todos de al menos 44 px) y la opacidad del relleno. En vertical, el juego
+pide girar el dispositivo y pausa la carrera. En dispositivos táctiles la calidad gráfica empieza en Baja.
 
 ## Accesibilidad
 
