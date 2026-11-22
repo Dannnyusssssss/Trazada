@@ -26,7 +26,7 @@ El aviso de licencia MIT de Three.js (Copyright © 2010-2026 three.js authors) s
 | vite | 8.3.6 | MIT | Servidor de desarrollo y empaquetado |
 | typescript | 6.0.3 | Apache-2.0 | Comprobación de tipos |
 | vitest | 5.1.0 | MIT | Tests de la lógica |
-| eslint | 10.14.0 | MIT | Análisis estático |
+| eslint | 10.15.0 | MIT | Análisis estático |
 | @eslint/js | 10.0.1 | MIT | Reglas recomendadas de ESLint |
 | typescript-eslint | 8.73.0 | MIT | Soporte de TypeScript en ESLint |
 | prettier | 3.9.10 | MIT | Formato del código |
