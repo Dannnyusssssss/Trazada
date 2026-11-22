@@ -11,6 +11,19 @@ const pureLogicFiles = [
   'src/audio/**/*.ts',
 ];
 
+const htmlInjection = [
+  { property: 'innerHTML', message: 'Usa textContent y creación de nodos.' },
+  { property: 'outerHTML', message: 'Usa textContent y creación de nodos.' },
+  { property: 'insertAdjacentHTML', message: 'Usa textContent y creación de nodos.' },
+  { property: 'createContextualFragment', message: 'Usa textContent y creación de nodos.' },
+  { object: 'document', property: 'writeln', message: 'No se usa document.writeln.' },
+];
+const noDocumentWrite = {
+  object: 'document',
+  property: 'write',
+  message: 'No se usa document.write.',
+};
+
 export default defineConfig(
   { ignores: ['dist/', 'coverage/', 'node_modules/'] },
   js.configs.recommended,
@@ -22,10 +35,7 @@ export default defineConfig(
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
-      'no-restricted-properties': [
-        'error',
-        { object: 'document', property: 'write', message: 'No se usa document.write.' },
-      ],
+      'no-restricted-properties': ['error', noDocumentWrite, ...htmlInjection],
     },
   },
   {
@@ -54,6 +64,8 @@ export default defineConfig(
       ],
       'no-restricted-properties': [
         'error',
+        noDocumentWrite,
+        ...htmlInjection,
         { object: 'Math', property: 'random', message: 'Usa core/rng.ts con semilla.' },
         { object: 'Date', property: 'now', message: 'El tiempo de juego se mide en pasos fijos.' },
         {

@@ -28,7 +28,7 @@ El aviso de licencia MIT de Three.js (Copyright © 2010-2026 three.js authors) s
 | vitest | 5.1.0 | MIT | Tests de la lógica |
 | eslint | 10.14.0 | MIT | Análisis estático |
 | @eslint/js | 10.0.1 | MIT | Reglas recomendadas de ESLint |
-| typescript-eslint | 8.72.1 | MIT | Soporte de TypeScript en ESLint |
+| typescript-eslint | 8.73.0 | MIT | Soporte de TypeScript en ESLint |
 | prettier | 3.9.10 | MIT | Formato del código |
 | @types/three | 0.187.0 | MIT | Tipos de Three.js |
 
@@ -38,8 +38,8 @@ Las dependencias transitivas se instalan desde `package-lock.json`.
 
 | Acción | Versión | Licencia |
 |---|---|---|
-| actions/checkout | v7 | MIT |
-| actions/setup-node | v7 | MIT |
-| actions/upload-pages-artifact | v5 | MIT |
-| actions/configure-pages | v6 | MIT |
-| actions/deploy-pages | v5 | MIT |
+| actions/checkout | v7.0.1 (fijada por hash de commit) | MIT |
+| actions/setup-node | v7.1.0 (fijada por hash de commit) | MIT |
+| actions/upload-pages-artifact | v5.0.0 (fijada por hash de commit) | MIT |
+| actions/configure-pages | v6.0.0 (fijada por hash de commit) | MIT |
+| actions/deploy-pages | v5.0.1 (fijada por hash de commit) | MIT |
