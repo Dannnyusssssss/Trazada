@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createControls } from '../src/core/input';
-import { AI, DIFFICULTIES, RACE, SIM } from '../src/data/balance';
+import { RIVAL_DRIVER, DIFFICULTIES, RACE, SIM } from '../src/data/balance';
 import { GORRION } from '../src/data/cars';
 import { TRACKS } from '../src/data/tracks';
 import { Track } from '../src/game/track';
@@ -32,7 +32,7 @@ function trackOf(id: string): Track {
   return track;
 }
 
-describe('IA: recorrido por circuito y dificultad', () => {
+describe('Rivales: recorrido por circuito y dificultad', () => {
   for (const def of TRACKS) {
     for (const difficulty of DIFFICULTIES) {
       it(`${def.name} (${difficulty}): los 5 rivales terminan 3 vueltas a su ritmo y sin atascarse`, () => {
@@ -45,18 +45,18 @@ describe('IA: recorrido por circuito y dificultad', () => {
         let maxSpeedSeen = 0;
         const { world: done } = runRace(world, 11, (w) => {
           for (const r of w.racers) {
-            if (r.kind !== 'ai') continue;
+            if (r.kind !== 'rival') continue;
             // Misma física: nunca superan la velocidad máxima de su coche.
             maxSpeedSeen = Math.max(maxSpeedSeen, r.car.forwardSpeed / r.params.maxSpeed);
           }
         });
-        const level = AI.levels[difficulty];
+        const level = RIVAL_DRIVER.levels[difficulty];
         const paceMs =
           def.medals.gold * level.pace.gold +
           def.medals.silver * level.pace.silver +
           def.medals.bronze * level.pace.bronze;
         for (const racer of done.racers) {
-          if (racer.kind !== 'ai') continue;
+          if (racer.kind !== 'rival') continue;
           expect(racer.race.phase, racer.name).toBe('finished');
           expect(racer.race.lapsCompleted).toBe(RACE.raceLaps);
           // Ninguno necesitó reaparecer (no se quedó atascado).
@@ -72,7 +72,7 @@ describe('IA: recorrido por circuito y dificultad', () => {
   }
 });
 
-describe('IA: se puede ganar', () => {
+describe('Rivales: se puede ganar', () => {
   for (const def of TRACKS) {
     it(`${def.name}: un piloto rápido gana en Fácil y en Normal`, () => {
       for (const difficulty of ['easy', 'normal'] as const) {
@@ -94,14 +94,14 @@ describe('IA: se puede ganar', () => {
       });
       const { world: done } = runRace(world, 14);
       for (const racer of done.racers) {
-        if (racer.kind !== 'ai') continue;
+        if (racer.kind !== 'rival') continue;
         expect(Math.min(...racer.race.lapTimes), racer.name).toBeGreaterThan(def.medals.gold);
       }
     });
   }
 });
 
-describe('IA: determinismo y ayuda limitada', () => {
+describe('Rivales: determinismo y ayuda limitada', () => {
   const track = trackOf('valle-solar');
 
   it('la misma semilla y la misma entrada dan la misma carrera', () => {
@@ -143,8 +143,8 @@ describe('IA: determinismo y ayuda limitada', () => {
         max = Math.max(max, driver.rubberBand);
       }
     }
-    expect(min).toBeGreaterThanOrEqual(1 - AI.rubberBand - 1e-9);
-    expect(max).toBeLessThanOrEqual(1 + AI.rubberBand + 1e-9);
+    expect(min).toBeGreaterThanOrEqual(1 - RIVAL_DRIVER.rubberBand - 1e-9);
+    expect(max).toBeLessThanOrEqual(1 + RIVAL_DRIVER.rubberBand + 1e-9);
     expect(min).toBeLessThan(1);
   });
 });

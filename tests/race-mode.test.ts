@@ -93,7 +93,7 @@ describe('modo Carrera: posiciones', () => {
     rival.params.engineAccel = 0;
     const teleports = rival.teleports;
     const controls = createControls();
-    for (let s = 0; s < SIM.hz * (RACE.countdownSeconds + RACE.aiStuckSeconds + 1); s++) {
+    for (let s = 0; s < SIM.hz * (RACE.countdownSeconds + RACE.rivalStuckSeconds + 1); s++) {
       world.step({ controls, respawn: false });
     }
     expect(rival.teleports).toBeGreaterThan(teleports);

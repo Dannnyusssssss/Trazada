@@ -4,7 +4,7 @@ import { createCarState, type CarState } from './car';
 import { createRaceState, type RaceState } from './race';
 import { createTrackQuery, type TrackQuery } from './track';
 
-export type RacerKind = 'player' | 'ai';
+export type RacerKind = 'player' | 'rival';
 
 /**
  * Un coche en la carrera: su estado físico, su progreso en la carrera y quién lo conduce.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AI, RACING_LINE } from '../src/data/balance';
+import { RIVAL_DRIVER, RACING_LINE } from '../src/data/balance';
 import { CARS, GORRION } from '../src/data/cars';
 import { TRACKS } from '../src/data/tracks';
 import {
@@ -17,7 +17,7 @@ describe('línea de carrera', () => {
     const line = racingLineFor(track);
 
     it(`${def.name}: queda dentro del asfalto con margen`, () => {
-      const limit = track.halfWidth - AI.lineMargin + 1e-9;
+      const limit = track.halfWidth - RIVAL_DRIVER.lineMargin + 1e-9;
       for (let i = 0; i < track.sampleCount; i++) {
         expect(Math.abs(line.offset[i] ?? 0)).toBeLessThanOrEqual(limit);
       }

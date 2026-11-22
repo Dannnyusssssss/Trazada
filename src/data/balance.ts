@@ -111,7 +111,7 @@ export const RACE = {
   /** Por debajo de esta velocidad (m/s), intentando moverse, el coche se considera atascado. */
   stuckSpeed: 1,
   /** Tiempo atascado tras el que un rival reaparece solo (s). */
-  aiStuckSeconds: 3,
+  rivalStuckSeconds: 3,
 } as const;
 
 /** Parrilla de salida del modo Carrera: dos columnas escalonadas por delante de la meta. */
@@ -140,7 +140,7 @@ export const DIFFICULTIES: readonly Difficulty[] = ['easy', 'normal', 'hard'];
  * Parámetros de conducción de los rivales en una dificultad. No cambian la física del coche: solo lo cerca
  * del límite que conducen.
  */
-export interface AiLevel {
+export interface RivalLevel {
   /**
    * Ritmo objetivo como mezcla de los tiempos de medalla del circuito: tiempo de vuelta =
    * oro·gold + plata·silver + bronce·bronze. De ahí sale la aceleración lateral que se permiten en curva.
@@ -153,13 +153,13 @@ export interface AiLevel {
 }
 
 /** Inteligencia de los rivales. Conducen con los mismos controles y la misma física que el jugador. */
-export const AI = {
+export const RIVAL_DRIVER = {
   levels: {
     // Fácil: entre la plata y el bronce. Normal: la plata. Difícil: un 2 % más lento que el oro.
     easy: { pace: { gold: 0, silver: 0.5, bronze: 0.5 }, brakeUse: 0.6, spread: 0.03 },
     normal: { pace: { gold: 0, silver: 1, bronze: 0 }, brakeUse: 0.7, spread: 0.025 },
     hard: { pace: { gold: 1.02, silver: 0, bronze: 0 }, brakeUse: 0.8, spread: 0.015 },
-  } satisfies Record<Difficulty, AiLevel>,
+  } satisfies Record<Difficulty, RivalLevel>,
   /**
    * Relación medida entre el tiempo real de vuelta de un rival y el estimado con su perfil (la dirección y
    * el tráfico hacen perder algo): el ritmo pedido se divide por ella.

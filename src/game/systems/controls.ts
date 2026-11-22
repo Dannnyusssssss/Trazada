@@ -6,7 +6,7 @@ import type { System } from '../world';
 
 /**
  * Controles de cada coche en este paso: los del jugador (con sus asistencias, si las tiene activas) y los
- * que calcula la IA para los rivales. Durante la cuenta atrás ningún coche responde.
+ * que calcula el comportamiento de los rivales. Durante la cuenta atrás ningún coche responde.
  * Los rivales siguen conduciendo después de cruzar la meta para no quedarse parados en la pista.
  */
 export const controlSystem: System = (world, input, dt) => {

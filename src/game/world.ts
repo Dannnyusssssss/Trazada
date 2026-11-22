@@ -2,10 +2,10 @@ import { clampCarParam, paramsMatch } from './tuning';
 import { resetControls, type CarControls } from '../core/input';
 import { vec2 } from '../core/math';
 import { Rng } from '../core/rng';
-import { AI, GRID, RACE, STEP_SECONDS, type Difficulty } from '../data/balance';
+import { RIVAL_DRIVER, GRID, RACE, STEP_SECONDS, type Difficulty } from '../data/balance';
 import { carById, type CarDef, type CarParams } from '../data/cars';
 import { RIVALS } from '../data/rivals';
-import { AiDriver } from './ai';
+import { RivalDriver } from './rival-driver';
 import { copyCarState, placeCar, type CarState } from './car';
 import { GhostRecorder, type GhostData } from './ghost';
 import { createRaceState, type RaceState } from './race';
@@ -89,7 +89,7 @@ export class World {
   readonly racers: Racer[] = [];
   readonly player: Racer;
   /** Conductor de cada coche (null para el jugador). */
-  readonly drivers: (AiDriver | null)[] = [];
+  readonly drivers: (RivalDriver | null)[] = [];
   /** Índices de los coches ordenados por posición (el primero va en cabeza). */
   readonly order: number[] = [];
   /** Asistencias de conducción del jugador (las fija quien crea el mundo, desde los ajustes). */
@@ -141,12 +141,12 @@ export class World {
 
     if (race) {
       const rng = new Rng(this.seed);
-      const level = AI.levels[this.difficulty];
+      const level = RIVAL_DRIVER.levels[this.difficulty];
       RIVALS.slice(0, GRID.slots - 1).forEach((rival, slot) => {
         const def = carById(rival.carId) ?? carDef;
         const racer = createRacer({
           index: this.racers.length,
-          kind: 'ai',
+          kind: 'rival',
           carDef: def,
           name: `${def.name} ${rival.colorName}`,
           bodyColor: rival.bodyColor,
@@ -156,7 +156,7 @@ export class World {
           totalLaps,
         });
         this.racers.push(racer);
-        this.drivers.push(new AiDriver(track, racer, level, rng));
+        this.drivers.push(new RivalDriver(track, racer, level, rng));
       });
     }
     this.reset(initialBestLapMs);

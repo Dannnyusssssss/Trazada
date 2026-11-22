@@ -36,7 +36,7 @@ export const respawnSystem: System = (world, input) => {
       racer.controls,
       RACE.stuckSpeed,
     );
-    let limitSeconds: number = RACE.aiStuckSeconds;
+    let limitSeconds: number = RACE.rivalStuckSeconds;
     if (isPlayer) limitSeconds = world.assists.autoRespawn ? ASSISTS.stuckSeconds : Infinity;
     if (racer.stuckSteps >= limitSeconds * SIM.hz) respawn(world, racer);
   }

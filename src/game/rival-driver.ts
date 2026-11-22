@@ -1,7 +1,7 @@
 import type { CarControls } from '../core/input';
 import { clamp, moveToward, wrapAngle } from '../core/math';
 import type { Rng } from '../core/rng';
-import { AI, type AiLevel } from '../data/balance';
+import { RIVAL_DRIVER, type RivalLevel } from '../data/balance';
 import { raceDistance, type Racer } from './racer';
 import {
   lateralAccelForLapTime,
@@ -12,7 +12,7 @@ import {
 import { progressDelta, type Track } from './track';
 
 /** Lo que el conductor necesita saber del resto de la carrera. */
-export interface AiContext {
+export interface RivalContext {
   readonly track: Track;
   readonly racers: readonly Racer[];
   /** El coche del jugador (referencia de la ayuda limitada), o null si no hay. */
@@ -26,7 +26,7 @@ export interface AiContext {
  * Cada rival tiene pequeñas diferencias fijadas por la semilla: un desplazamiento propio sobre la línea
  * y algo más o menos de agresividad en las curvas.
  */
-export class AiDriver {
+export class RivalDriver {
   private readonly line: RacingLine;
   /** Velocidad objetivo por muestra con la agresividad base de este rival (m/s). */
   readonly profile: Float64Array;
@@ -39,11 +39,11 @@ export class AiDriver {
   /** Último ajuste de la ayuda limitada (para depuración y tests). */
   rubberBand = 1;
 
-  constructor(track: Track, racer: Racer, level: AiLevel, rng: Rng) {
+  constructor(track: Track, racer: Racer, level: RivalLevel, rng: Rng) {
     this.line = racingLineFor(track);
     // Ritmo de este rival: el de la dificultad con una pequeña variación propia.
     const skill = 1 + rng.range(-level.spread, level.spread);
-    this.bias = rng.range(-AI.lineBias, AI.lineBias);
+    this.bias = rng.range(-RIVAL_DRIVER.lineBias, RIVAL_DRIVER.lineBias);
     const medals = track.def.medals;
     const paceMs =
       medals.gold * level.pace.gold +
@@ -54,7 +54,7 @@ export class AiDriver {
       this.line,
       racer.params,
       brake,
-      (paceMs / 1000 / AI.paceCorrection) * skill,
+      (paceMs / 1000 / RIVAL_DRIVER.paceCorrection) * skill,
     );
     this.profile = speedProfile(this.line, racer.params, this.lateralAccel, brake);
   }
@@ -66,12 +66,12 @@ export class AiDriver {
   }
 
   /** Ajuste de la ayuda limitada: algo más al límite si va muy por detrás del jugador, algo menos si se escapa. */
-  private rubberBandFactor(ctx: AiContext, racer: Racer): number {
+  private rubberBandFactor(ctx: RivalContext, racer: Racer): number {
     const player = ctx.player;
     if (!player || player === racer || player.race.phase === 'finished') return 1;
     const length = ctx.track.length;
     const gap = raceDistance(player, length) - raceDistance(racer, length);
-    return 1 + clamp(gap / AI.rubberBandGap, -1, 1) * AI.rubberBand;
+    return 1 + clamp(gap / RIVAL_DRIVER.rubberBandGap, -1, 1) * RIVAL_DRIVER.rubberBand;
   }
 
   /** Velocidad objetivo en un progreso dado (m/s), interpolando el perfil. */
@@ -80,7 +80,7 @@ export class AiDriver {
     return this.profile[i] ?? 0;
   }
 
-  drive(ctx: AiContext, racer: Racer, out: CarControls, dt: number): CarControls {
+  drive(ctx: RivalContext, racer: Racer, out: CarControls, dt: number): CarControls {
     const track = ctx.track;
     const car = racer.car;
     const q = racer.query;
@@ -94,11 +94,11 @@ export class AiDriver {
     let target =
       Math.min(
         this.targetSpeedAt(progress),
-        this.targetSpeedAt(progress + speed * AI.speedPreview),
+        this.targetSpeedAt(progress + speed * RIVAL_DRIVER.speedPreview),
       ) * scale;
 
     // Tráfico. Límite lateral para el centro del coche: dentro del asfalto con margen.
-    const limit = track.halfWidth - AI.edgeMargin;
+    const limit = track.halfWidth - RIVAL_DRIVER.edgeMargin;
     const lineOffset = this.line.offsetAt(progress) + this.bias;
     const myLateral = q.lateral;
     let minLateral = -limit;
@@ -109,18 +109,18 @@ export class AiDriver {
       if (other === racer) continue;
       const ahead = progressDelta(progress, other.query.progress, track.length);
       const otherLateral = other.query.lateral;
-      if (Math.abs(ahead) <= AI.alongside) {
+      if (Math.abs(ahead) <= RIVAL_DRIVER.alongside) {
         // Coche al lado: no meterse en su carril (si no, los dos se empujan y se frenan).
         const gap = otherLateral - myLateral;
-        if (Math.abs(gap) < AI.sideGap + 0.6) {
-          if (gap > 0) maxLateral = Math.min(maxLateral, otherLateral - AI.sideGap);
-          else minLateral = Math.max(minLateral, otherLateral + AI.sideGap);
+        if (Math.abs(gap) < RIVAL_DRIVER.sideGap + 0.6) {
+          if (gap > 0) maxLateral = Math.min(maxLateral, otherLateral - RIVAL_DRIVER.sideGap);
+          else minLateral = Math.max(minLateral, otherLateral + RIVAL_DRIVER.sideGap);
         }
         continue;
       }
       // Coche delante en la misma trayectoria y más lento: candidato a adelantar (el más cercano).
-      if (ahead <= 0 || ahead > AI.avoidDistance || ahead >= blockerAhead) continue;
-      if (Math.abs(otherLateral - (lineOffset + this.avoid)) > AI.avoidWidth) continue;
+      if (ahead <= 0 || ahead > RIVAL_DRIVER.avoidDistance || ahead >= blockerAhead) continue;
+      if (Math.abs(otherLateral - (lineOffset + this.avoid)) > RIVAL_DRIVER.avoidWidth) continue;
       if (speed < other.car.forwardSpeed - 0.5) continue;
       blocker = other;
       blockerAhead = ahead;
@@ -138,8 +138,8 @@ export class AiDriver {
     if (blocker) {
       const otherLateral = blocker.query.lateral;
       const preferLeft = otherLateral - (lineOffset + this.avoid) < 0;
-      const left = otherLateral + AI.avoidShift;
-      const right = otherLateral - AI.avoidShift;
+      const left = otherLateral + RIVAL_DRIVER.avoidShift;
+      const right = otherLateral - RIVAL_DRIVER.avoidShift;
       const leftFits = left <= maxLateral;
       const rightFits = right >= minLateral;
       let wanted: number | null = null;
@@ -157,10 +157,10 @@ export class AiDriver {
         }
       }
     }
-    this.avoid = moveToward(this.avoid, desiredAvoid, AI.avoidRate * dt);
+    this.avoid = moveToward(this.avoid, desiredAvoid, RIVAL_DRIVER.avoidRate * dt);
 
     // Dirección: apuntar a un punto de la línea por delante (persecución pura), respetando el hueco libre.
-    const lookAhead = AI.lookAhead + speed * AI.lookAheadPerSpeed;
+    const lookAhead = RIVAL_DRIVER.lookAhead + speed * RIVAL_DRIVER.lookAheadPerSpeed;
     const aheadProgress = progress + lookAhead;
     const i = track.indexAt(aheadProgress);
     const offset = clamp(
@@ -174,12 +174,15 @@ export class AiDriver {
     const tz = track.z(i) + nz * offset;
     const desired = Math.atan2(-(tz - car.z), tx - car.x);
     const error = wrapAngle(desired - car.heading);
-    out.steer = clamp(error * AI.steerGain, -1, 1);
+    out.steer = clamp(error * RIVAL_DRIVER.steerGain, -1, 1);
 
     // Acelerador y freno según la diferencia con la velocidad objetivo.
     const diff = target - speed;
     out.throttle = diff > 0 ? clamp(diff / 1.5 + 0.4, 0, 1) : 0;
-    out.brake = diff < -AI.brakeMargin ? clamp((-diff - AI.brakeMargin) / 3 + 0.3, 0, 1) : 0;
+    out.brake =
+      diff < -RIVAL_DRIVER.brakeMargin
+        ? clamp((-diff - RIVAL_DRIVER.brakeMargin) / 3 + 0.3, 0, 1)
+        : 0;
     out.handbrake = false;
     return out;
   }

@@ -1,5 +1,5 @@
 import { clamp, mod } from '../core/math';
-import { AI, RACING_LINE } from '../data/balance';
+import { RIVAL_DRIVER, RACING_LINE } from '../data/balance';
 import type { CarParams } from '../data/cars';
 import type { Track } from './track';
 
@@ -21,7 +21,7 @@ export class RacingLine {
 
   constructor(readonly track: Track) {
     const n = track.sampleCount;
-    this.maxOffset = Math.max(0, track.halfWidth - AI.lineMargin);
+    this.maxOffset = Math.max(0, track.halfWidth - RIVAL_DRIVER.lineMargin);
     const offset = new Float64Array(n);
     const nx = new Float64Array(n);
     const nz = new Float64Array(n);
