@@ -515,6 +515,17 @@ h3 {
   font-weight: 700;
 }
 
+.notice-warn,
+.hud-tuned {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.hud-tuned {
+  max-width: 220px;
+  font-size: 0.85em;
+}
+
 /* Minimapa y diferencia con el fantasma */
 
 .minimap {

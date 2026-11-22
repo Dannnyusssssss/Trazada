@@ -142,3 +142,14 @@ export function carById(id: string): CarDef | null {
 
 /** Lista de los parámetros numéricos editables en el panel de depuración. */
 export const CAR_PARAM_KEYS = Object.keys(GORRION.params) as (keyof CarParams)[];
+
+/**
+ * Rango en que el panel de depuración deja cambiar cada parámetro, como múltiplo del valor del coche.
+ * Evita valores absurdos (por ejemplo 1e308) que vuelvan inestable la simulación.
+ */
+export const CAR_PARAM_TUNING = { minFactor: 0.25, maxFactor: 4 } as const;
+
+/** Topes absolutos de los parámetros que son fracciones. */
+export const CAR_PARAM_CEILING: Partial<Record<keyof CarParams, number>> = {
+  turnHighSpeedReduction: 0.95,
+};

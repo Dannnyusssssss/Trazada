@@ -161,5 +161,6 @@ export const TEXTS = {
     reset: 'Restablecer',
     show: 'Mostrar valores',
     physics: 'Física',
+    noRecords: 'Física modificada: no se guardan récords',
   },
 } as const;

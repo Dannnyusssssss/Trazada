@@ -14,3 +14,5 @@ no consumen CPU. Cualquier otro valor o parámetro se ignora.
 - "Restablecer" vuelve a los valores de `src/data/cars.ts`.
 - "Copiar valores" muestra en el panel el objeto con los valores actuales para pegarlo en `src/data/cars.ts`.
 - Los cambios no se guardan: al recargar se usan los valores de `src/data/cars.ts`.
+- Cada valor se limita a un rango alrededor del valor del coche; un valor no numérico se descarta.
+- En cuanto se cambia un parámetro, la sesión deja de guardar récords, medallas, fantasmas y puestos, y el HUD y los resultados lo indican. Vuelve a contar al reiniciar con los valores originales.

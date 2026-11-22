@@ -36,6 +36,8 @@ export interface ResultsData {
   hasNext: boolean;
   /** Resultados de la carrera contra rivales, o null en contrarreloj. */
   race: RaceResults | null;
+  /** La física se cambió desde el panel de depuración: nada de esta sesión se guardó. */
+  tuned: boolean;
 }
 
 export interface ResultsActions {
@@ -179,6 +181,8 @@ export class ResultsScreen {
       if (data.newRecord)
         notices.push(el('p', { className: 'notice-good', text: TEXTS.results.newRecord }));
     }
+    if (data.tuned)
+      notices.push(el('p', { className: 'notice-warn', text: TEXTS.debug.noRecords }));
     if (data.unlockedTrack) {
       notices.push(
         el('p', { className: 'notice-good', text: TEXTS.results.unlocked(data.unlockedTrack) }),

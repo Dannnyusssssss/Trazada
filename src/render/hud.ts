@@ -15,6 +15,7 @@ export class Hud {
   private readonly positionRow: HTMLElement;
   private readonly positionValue: HTMLElement;
   private readonly drift: HTMLElement;
+  private readonly tunedNotice: HTMLElement;
   private readonly lapValue: HTMLElement;
   private readonly timeValue: HTMLElement;
   private readonly lastValue: HTMLElement;
@@ -77,6 +78,11 @@ export class Hud {
     this.lapMessage = el('div', { className: 'hud-banner', attrs: { 'aria-live': 'polite' } });
     // Indicador fijo de derrape (la señal visual del chirrido de neumáticos); aparece y se va sin parpadear.
     this.drift = el('div', { className: 'hud-panel hud-drift', text: `≈ ${TEXTS.hud.drift}` });
+    // Aviso fijo de sesión de depuración con la física cambiada (sus resultados no se guardan).
+    this.tunedNotice = el('div', {
+      className: 'hud-row hud-tuned',
+      text: `⚠ ${TEXTS.debug.noRecords}`,
+    });
 
     this.root = el('div', { className: 'hud' }, [
       el('div', { className: 'hud-panel hud-times' }, [
@@ -86,6 +92,7 @@ export class Hud {
         lastRow,
         bestRow,
         ghostRow,
+        this.tunedNotice,
       ]),
       this.minimap.canvas,
       el('div', { className: 'hud-top-right' }, [
@@ -131,6 +138,7 @@ export class Hud {
       );
     }
     setVisible(this.drift, drifting);
+    setVisible(this.tunedNotice, world.tuned);
     setText(this.lapValue, `${race.lap}/${race.totalLaps}`);
     setVisible(this.ghostRow, ghostDeltaMs !== null);
     if (ghostDeltaMs !== null) {

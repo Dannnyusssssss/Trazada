@@ -33,9 +33,8 @@ export class DebugOverlay {
     const rows = CAR_PARAM_KEYS.map((key) => {
       const input = el('input', { attrs: { type: 'number', step: 'any', 'aria-label': key } });
       input.addEventListener('change', () => {
-        const value = Number(input.value);
-        if (Number.isFinite(value) && value >= 0) this.getWorld().params[key] = value;
-        else input.value = String(this.getWorld().params[key]);
+        // El mundo recorta el valor a su rango y marca la sesión: no se guardarán sus resultados.
+        input.value = String(this.getWorld().setParam(key, Number(input.value)));
       });
       this.inputs.set(key, input);
       return el('label', { className: 'debug-param' }, [el('span', { text: key }), input]);
@@ -114,8 +113,7 @@ export class DebugOverlay {
   }
 
   private resetParams(): void {
-    const world = this.getWorld();
-    Object.assign(world.params, world.carDef.params);
+    this.getWorld().resetParams();
     this.syncInputs();
   }
 

@@ -1,3 +1,4 @@
+import { clampCarParam, paramsMatch } from './tuning';
 import { resetControls, type CarControls } from '../core/input';
 import { vec2 } from '../core/math';
 import { Rng } from '../core/rng';
@@ -100,13 +101,20 @@ export class World {
   lastGhost: GhostData | null = null;
   /** Aumenta cada vez que hay una vuelta grabada nueva en lastGhost. */
   ghostVersion = 0;
+  /**
+   * La física del jugador se cambió desde el panel de depuración en esta sesión. Mientras siga marcada no
+   * se guardan récords, medallas, fantasmas ni puestos.
+   */
+  tuned = false;
+  /** Mejor vuelta conocida de sesiones sin la física cambiada (la que se lleva a la sesión siguiente). */
+  private trustedBestLapMs: number | null = null;
   private readonly tmpPos = vec2();
   private readonly tmpTangent = vec2();
 
   constructor(
     readonly track: Track,
     readonly carDef: CarDef,
-    private readonly initialBestLapMs: number | null,
+    initialBestLapMs: number | null,
     options: WorldOptions = {},
   ) {
     this.mode = options.mode ?? 'timeTrial';
@@ -185,12 +193,18 @@ export class World {
     return this.player.lapCompletedThisStep;
   }
 
-  /** Vuelve a la parrilla y reinicia la carrera conservando la mejor vuelta conocida. */
-  reset(bestLapMs: number | null = this.player.race.bestLapMs ?? this.initialBestLapMs): void {
+  /**
+   * Vuelve a la parrilla y reinicia la carrera conservando la mejor vuelta conocida. La de una sesión con
+   * la física cambiada no se conserva: se vuelve a la última mejor vuelta de una sesión normal.
+   */
+  reset(bestLapMs?: number | null): void {
+    if (bestLapMs !== undefined) this.trustedBestLapMs = bestLapMs;
+    else if (!this.tuned)
+      this.trustedBestLapMs = this.player.race.bestLapMs ?? this.trustedBestLapMs;
     const totalLaps = this.mode === 'race' ? RACE.raceLaps : RACE.timeTrialLaps;
     this.order.length = 0;
     for (const racer of this.racers) {
-      racer.race = createRaceState(racer === this.player ? bestLapMs : null, totalLaps);
+      racer.race = createRaceState(racer === this.player ? this.trustedBestLapMs : null, totalLaps);
       this.placeRacer(racer, racer.gridProgress, racer.gridLateral);
       racer.race.lapDistance = racer.gridProgress;
       resetControls(racer.controls);
@@ -202,6 +216,28 @@ export class World {
     }
     for (const driver of this.drivers) driver?.reset();
     this.recorder.stop();
+    // Una sesión nueva solo vuelve a contar si la física es otra vez la del coche.
+    this.tuned = !paramsMatch(this.params, this.carDef.params);
+  }
+
+  /** Los resultados de esta sesión se pueden guardar (la física no se cambió para depurar). */
+  get canRecord(): boolean {
+    return !this.tuned;
+  }
+
+  /** Cambia un parámetro de física del jugador (panel de depuración). Devuelve el valor aplicado. */
+  setParam(key: keyof CarParams, value: number): number {
+    const applied = clampCarParam(key, value, this.carDef.params) ?? this.params[key];
+    if (applied !== this.params[key]) {
+      this.params[key] = applied;
+      this.tuned = true;
+    }
+    return applied;
+  }
+
+  /** Devuelve la física del jugador a la del coche. La sesión sigue marcada hasta reiniciarla. */
+  resetParams(): void {
+    Object.assign(this.params, this.carDef.params);
   }
 
   /** Coloca un coche parado en un progreso de la pista, desplazado lateralmente (positivo a la izquierda). */
