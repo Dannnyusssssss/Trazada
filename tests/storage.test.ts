@@ -287,3 +287,77 @@ describe('guardado del Hito 4 (resolución dinámica)', () => {
     }
   });
 });
+
+describe('ajustes táctiles (Hito 5)', () => {
+  it('por defecto: aceleración automática, diestro, tamaño mediano y opacidad 60 %', () => {
+    expect(defaults.settings.touch).toEqual({
+      leftHanded: false,
+      size: 'medium',
+      opacity: 60,
+      autoThrottle: true,
+    });
+  });
+
+  it('en un dispositivo táctil la calidad inicial es Baja, pero una calidad guardada manda', () => {
+    const touchDefaults = defaultSave(false, true);
+    expect(touchDefaults.settings.quality).toBe('low');
+    expect(parseSave(null, touchDefaults).settings.quality).toBe('low');
+    const saved = JSON.stringify({ version: 1, settings: { quality: 'high' } });
+    expect(parseSave(saved, touchDefaults).settings.quality).toBe('high');
+    // Un guardado antiguo sin calidad también recibe la de por defecto del dispositivo.
+    const old = JSON.stringify({ version: 1, settings: { muted: true } });
+    expect(parseSave(old, touchDefaults).settings.quality).toBe('low');
+  });
+
+  it('un guardado antiguo sin ajustes táctiles recibe los valores por defecto', () => {
+    const raw = JSON.stringify({ version: 1, settings: { muted: true, fov: 80 } });
+    expect(parseSave(raw, defaults).settings.touch).toEqual(defaults.settings.touch);
+  });
+
+  it('lee los ajustes táctiles válidos y vuelven igual tras guardar', () => {
+    const touch = { leftHanded: true, size: 'large', opacity: 90, autoThrottle: false };
+    const raw = JSON.stringify({ version: 1, settings: { touch } });
+    const save = parseSave(raw, defaults);
+    expect(save.settings.touch).toEqual(touch);
+    expect(parseSave(serializeSave(save), defaults).settings.touch).toEqual(touch);
+  });
+
+  it('descarta campo por campo los valores hostiles o corruptos', () => {
+    const hostile: unknown[] = [
+      { leftHanded: 'true', size: 'enorme', opacity: 1e9, autoThrottle: 1 },
+      { leftHanded: null, size: '<img src=x onerror=alert(1)>', opacity: -5, autoThrottle: {} },
+      { size: ['large'], opacity: Number.NaN },
+      { opacity: '90' },
+      { opacity: 39.9 },
+      { opacity: 100.1 },
+      { __proto__: { leftHanded: true }, constructor: 'x' },
+    ];
+    for (const touch of hostile) {
+      const raw = JSON.stringify({ version: 1, settings: { touch } });
+      expect(parseSave(raw, defaults).settings.touch).toEqual(defaults.settings.touch);
+    }
+    for (const touch of ['zurdo', 42, null, [true], true]) {
+      const raw = JSON.stringify({ version: 1, settings: { touch } });
+      expect(parseSave(raw, defaults).settings.touch).toEqual(defaults.settings.touch);
+    }
+  });
+
+  it('mezcla: conserva lo válido y corrige solo lo inválido; la opacidad se redondea', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      settings: { touch: { leftHanded: true, size: 'gigante', opacity: 54.6, autoThrottle: 'no' } },
+    });
+    expect(parseSave(raw, defaults).settings.touch).toEqual({
+      leftHanded: true,
+      size: 'medium',
+      opacity: 55,
+      autoThrottle: true,
+    });
+  });
+
+  it('no comparte el objeto táctil con los valores por defecto (cambiar uno no altera el otro)', () => {
+    const save = parseSave(null, defaults);
+    save.settings.touch.opacity = 100;
+    expect(defaults.settings.touch.opacity).toBe(60);
+  });
+});

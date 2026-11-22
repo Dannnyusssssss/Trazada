@@ -14,16 +14,19 @@ export class PauseMenu {
   readonly root: HTMLElement;
   private readonly resumeButton: HTMLButtonElement;
   private readonly message: HTMLElement;
+  private readonly touchMessage: HTMLElement;
 
   constructor(actions: PauseActions) {
     this.resumeButton = button(TEXTS.pause.resume, actions.onResume, 'btn btn-primary');
     this.message = el('p', { className: 'hint' });
+    this.touchMessage = el('p', { className: 'hint only-touch', text: TEXTS.pause.touchHint });
     this.root = el(
       'section',
       { className: 'screen panel pause-menu', attrs: { 'aria-labelledby': 'pause-title' } },
       [
         el('h2', { text: TEXTS.pause.title, attrs: { id: 'pause-title' } }),
         this.message,
+        this.touchMessage,
         el('div', { className: 'actions actions-column' }, [
           this.resumeButton,
           button(TEXTS.pause.restart, actions.onRestart),
@@ -37,6 +40,9 @@ export class PauseMenu {
 
   show(focusLost: boolean): void {
     setText(this.message, focusLost ? TEXTS.pause.focusLost : TEXTS.pause.hint);
+    // La pista de teclas solo se ve sin pantalla táctil; el aviso de foco perdido, siempre.
+    this.message.classList.toggle('only-keys', !focusLost);
+    setVisible(this.touchMessage, !focusLost);
     setVisible(this.root, true);
     this.resumeButton.focus({ preventScroll: true });
   }

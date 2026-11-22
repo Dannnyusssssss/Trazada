@@ -14,8 +14,9 @@ import { GameRenderer } from './render/scene';
 import { GhostStore } from './save/ghost-storage';
 import { SaveStore, browserStorage, defaultSave, type Settings } from './save/storage';
 import { DebugOverlay } from './ui/debug-overlay';
-import { el, setVisible } from './ui/dom';
+import { el, setText, setVisible } from './ui/dom';
 import { MessageScreen } from './ui/message-screen';
+import { TouchControls } from './ui/touch-controls';
 import type { Selection } from './ui/select-screen';
 import { attachBrowserEvents } from './app/browser-events';
 import { GameInput } from './app/game-input';
@@ -36,8 +37,11 @@ type Screen = 'menu' | 'select' | 'settings' | 'playing' | 'paused' | 'results' 
 export class App {
   private screen: Screen = 'menu';
   private settingsReturn: 'menu' | 'paused' = 'menu';
-  /** Teclado y mando combinados. */
+  /** Teclado, mando y pantalla táctil combinados. */
   private readonly input = new GameInput();
+  /** Botones táctiles en pantalla (no se crean hasta que hay pantalla táctil). */
+  private touchUi: TouchControls | null = null;
+  private touchShown = false;
   private readonly accumulator = new FixedStepAccumulator(
     STEP_SECONDS,
     SIM.maxStepsPerFrame,
@@ -73,7 +77,7 @@ export class App {
   constructor(private readonly root: HTMLElement) {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const storage = browserStorage();
-    this.store = new SaveStore(storage, defaultSave(prefersReduced));
+    this.store = new SaveStore(storage, defaultSave(prefersReduced, TouchControls.prefersTouch()));
     this.recorder = new SessionRecorder(this.store, new GhostStore(storage), this.view);
     this.worlds = new WorldFactory(this.store);
     const first = this.worlds.initialSelection();
@@ -111,6 +115,8 @@ export class App {
     this.view.attach(this.renderer, this.chase, this.hud);
     this.gameElement.appendChild(this.hud.root);
     setVisible(this.hud.root, false);
+    this.touchUi = new TouchControls(this.gameElement, this.input.touch);
+    if (TouchControls.prefersTouch()) this.enableTouch();
 
     this.menus = new Menus(
       this.overlay,
@@ -137,6 +143,7 @@ export class App {
       isDriving: () => this.screen === 'playing',
       onAction: this.handleAction,
       unlockAudio: () => this.sound.unlock(),
+      onTouch: () => this.enableTouch(),
       onFocusLost: () => this.pause(true),
     });
 
@@ -215,6 +222,7 @@ export class App {
     this.lastFrame = now;
     renderer.checkPixelRatio();
     this.input.pollGamepad(this.screen === 'playing', this.handleAction);
+    this.syncTouch();
 
     if (this.screen === 'playing' && !this.contextLost) {
       const steps = this.accumulator.advance(dt);
@@ -249,6 +257,55 @@ export class App {
     if (this.view.draw(this.world, dt, alpha, playing, settings.reducedMotion, settings.fov)) {
       this.needsRender = playing;
     }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Controles táctiles
+
+  /** Crea los botones táctiles la primera vez que hacen falta y pasa la entrada a modo táctil. */
+  private enableTouch(): void {
+    const touch = this.touchUi;
+    if (!touch) return;
+    this.input.noteTouch();
+    if (touch.enabled) return;
+    touch.enable();
+    this.applyTouchSettings();
+    this.root.classList.add('is-touch');
+    // Aviso para girar el dispositivo: solo se crea con pantalla táctil.
+    // Su texto se pone al pasar a vertical para que los lectores de pantalla lo anuncien; el CSS lo muestra.
+    const rotateNotice = el('p', { className: 'rotate-notice', attrs: { role: 'status' } });
+    this.overlay.appendChild(rotateNotice);
+    const portrait = window.matchMedia('(orientation: portrait)');
+    const setNotice = (vertical: boolean): void =>
+      setText(rotateNotice, vertical ? TEXTS.touch.rotate : '');
+    setNotice(portrait.matches);
+    // Al girar a vertical durante la carrera se pausa.
+    portrait.addEventListener('change', (event) => {
+      setNotice(event.matches);
+      if (event.matches) this.pause(false);
+    });
+  }
+
+  private applyTouchSettings(): void {
+    const touch = this.store.data.settings.touch;
+    this.input.setAutoThrottle(touch.autoThrottle);
+    this.touchUi?.applyLayout({
+      leftHanded: touch.leftHanded,
+      size: touch.size,
+      opacity: touch.opacity / 100,
+    });
+  }
+
+  /** Muestra los botones táctiles solo mientras se conduce y reparte sus botones de un disparo. */
+  private syncTouch(): void {
+    const touch = this.touchUi;
+    if (!touch?.enabled) return;
+    const show = this.screen === 'playing';
+    if (show !== this.touchShown) {
+      this.touchShown = show;
+      touch.setVisible(show);
+    }
+    this.input.pollTouch(show, this.handleAction);
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -431,6 +488,7 @@ export class App {
     this.sound.setMuted(settings.muted);
     this.sound.setVolume(settings.volume);
     this.sound.setMusic(settings.music);
+    this.applyTouchSettings();
     document.documentElement.classList.toggle('reduced-motion', settings.reducedMotion);
     this.needsRender = true;
   }

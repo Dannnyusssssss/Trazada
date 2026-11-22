@@ -9,6 +9,12 @@ import {
   type Quality,
 } from '../data/balance';
 import { defaultAssists, type AssistSettings } from '../game/assists';
+import {
+  defaultTouchSettings,
+  TOUCH_OPACITY,
+  TOUCH_SIZES,
+  type TouchSettings,
+} from '../core/touch';
 import type { GameMode } from '../game/world';
 import { META, SAVE_KEY } from '../data/meta';
 
@@ -41,6 +47,8 @@ export interface Settings {
   dynamicResolution: boolean;
   /** Escala de resolución interna que dejó la resolución dinámica (1 = completa). */
   renderScale: number;
+  /** Controles táctiles: distribución, tamaño, opacidad y aceleración automática. */
+  touch: TouchSettings;
 }
 
 export interface SaveData {
@@ -63,13 +71,17 @@ const MAX_TRACKS = 64;
 const MAX_CARS_PER_TRACK = 32;
 export const ID_PATTERN = /^[a-z0-9-]{1,32}$/;
 
-export function defaultSave(prefersReducedMotion: boolean): SaveData {
+/**
+ * Valores por defecto. En un dispositivo táctil la calidad inicial es Baja; una calidad guardada siempre
+ * tiene prioridad, porque al leer el guardado solo se usan los valores por defecto para lo que falta.
+ */
+export function defaultSave(prefersReducedMotion: boolean, prefersTouch = false): SaveData {
   return {
     settings: {
       muted: false,
       reducedMotion: prefersReducedMotion,
       fov: CAMERA.fovDefault,
-      quality: 'medium',
+      quality: prefersTouch ? 'low' : 'medium',
       camera: 'chase',
       lastTrackId: 'valle-solar',
       lastCarId: 'gorrion',
@@ -80,6 +92,7 @@ export function defaultSave(prefersReducedMotion: boolean): SaveData {
       assists: defaultAssists(),
       dynamicResolution: true,
       renderScale: 1,
+      touch: defaultTouchSettings(),
     },
     bestLaps: {},
     raceBest: {},
@@ -110,7 +123,11 @@ function validLapMs(value: unknown): value is number {
 /** Interpreta el texto guardado. Nunca lanza: ante cualquier problema usa los valores por defecto. */
 export function parseSave(raw: string | null, defaults: SaveData): SaveData {
   const result: SaveData = {
-    settings: { ...defaults.settings, assists: { ...defaults.settings.assists } },
+    settings: {
+      ...defaults.settings,
+      assists: { ...defaults.settings.assists },
+      touch: { ...defaults.settings.touch },
+    },
     bestLaps: {},
     raceBest: {},
   };
@@ -180,6 +197,28 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
       (DYNAMIC_RESOLUTION.scales as readonly number[]).includes(scale)
     ) {
       result.settings.renderScale = scale;
+    }
+    // Campos añadidos en el Hito 5: controles táctiles.
+    const touch = settings.touch;
+    if (isRecord(touch)) {
+      const out = result.settings.touch;
+      if (typeof touch.leftHanded === 'boolean') out.leftHanded = touch.leftHanded;
+      if (typeof touch.autoThrottle === 'boolean') out.autoThrottle = touch.autoThrottle;
+      if (
+        typeof touch.size === 'string' &&
+        (TOUCH_SIZES as readonly string[]).includes(touch.size)
+      ) {
+        out.size = touch.size as TouchSettings['size'];
+      }
+      const opacity = touch.opacity;
+      if (
+        typeof opacity === 'number' &&
+        Number.isFinite(opacity) &&
+        opacity >= TOUCH_OPACITY.min &&
+        opacity <= TOUCH_OPACITY.max
+      ) {
+        out.opacity = Math.round(opacity);
+      }
     }
   }
 

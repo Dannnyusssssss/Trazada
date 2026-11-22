@@ -612,3 +612,265 @@ h3 {
 .pad-button kbd {
   min-width: 2.6em;
 }
+
+/* Hito 5: controles táctiles. La opacidad ajustable solo afecta al relleno: el icono y el borde siguen
+   opacos y con contorno oscuro para mantener el contraste (≥ 3:1) sobre cualquier fondo. */
+
+.game {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.touch-layer {
+  --touch-size: 72px;
+  --touch-gap: 12px;
+  --touch-opacity: 0.6;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+
+.touch-layer[data-size='small'] {
+  --touch-size: 56px;
+  --touch-gap: 10px;
+}
+
+.touch-layer[data-size='large'] {
+  --touch-size: 88px;
+  --touch-gap: 14px;
+}
+
+.touch-top,
+.touch-steer,
+.touch-pedals {
+  position: absolute;
+  display: flex;
+  gap: var(--touch-gap);
+}
+
+.touch-top {
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.touch-steer,
+.touch-pedals {
+  bottom: max(16px, env(safe-area-inset-bottom));
+  align-items: flex-end;
+}
+
+.touch-layer[data-steer='start'] .touch-steer,
+.touch-layer[data-pedals='start'] .touch-pedals {
+  left: max(16px, env(safe-area-inset-left));
+}
+
+.touch-layer[data-steer='end'] .touch-steer,
+.touch-layer[data-pedals='end'] .touch-pedals {
+  right: max(16px, env(safe-area-inset-right));
+}
+
+/* Con los pedales a la izquierda (modo zurdo), el acelerador queda en el borde exterior. */
+.touch-layer[data-pedals='start'] .touch-pedals {
+  flex-direction: row-reverse;
+}
+
+.touch-btn {
+  pointer-events: auto;
+  touch-action: none;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #f5f3ee;
+  border-radius: 50%;
+  background: rgba(12, 16, 28, var(--touch-opacity));
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.75),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: calc(var(--touch-size) * 0.36);
+  line-height: 1;
+  text-shadow:
+    0 0 3px #000,
+    0 1px 2px #000;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn--throttle,
+.touch-btn--brake {
+  border-radius: 14px;
+  height: calc(var(--touch-size) * 1.45);
+}
+
+.touch-btn--handbrake,
+.touch-top .touch-btn {
+  width: max(44px, calc(var(--touch-size) * 0.72));
+  height: max(44px, calc(var(--touch-size) * 0.72));
+  font-size: calc(var(--touch-size) * 0.22);
+}
+
+.touch-btn--throttle {
+  border-color: var(--accent);
+}
+
+/* Disco oscuro fijo tras el icono: el icono blanco mantiene el contraste aunque el relleno sea muy
+   transparente y el fondo muy claro. */
+.touch-icon {
+  display: grid;
+  place-items: center;
+  min-width: 1.7em;
+  min-height: 1.7em;
+  padding: 0 0.2em;
+  border-radius: 999px;
+  background: rgba(8, 10, 18, 0.88);
+}
+
+.touch-btn.is-held .touch-icon {
+  background: transparent;
+}
+
+.reduced-motion .touch-btn.is-held {
+  transform: none;
+}
+
+/* Pulsado: relleno claro e icono oscuro (el estado no depende solo del color: cambia también el tamaño). */
+.touch-btn.is-held {
+  background: rgba(245, 243, 238, 0.9);
+  color: #111;
+  text-shadow: none;
+  transform: scale(0.94);
+}
+
+.touch-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Textos que dependen de la entrada: los de teclado se ocultan con pantalla táctil y al revés. */
+.only-touch {
+  display: none;
+}
+
+.is-touch .only-touch {
+  display: block;
+}
+
+.is-touch .only-keys,
+.is-touch .hud-hint {
+  display: none;
+}
+
+/* Zona segura (muescas y bordes redondeados) para menús y HUD. */
+.overlay {
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.hud-times,
+.minimap {
+  left: max(12px, env(safe-area-inset-left));
+}
+
+.hud-times,
+.hud-top-right {
+  top: max(12px, env(safe-area-inset-top));
+}
+
+.hud-top-right {
+  right: max(12px, env(safe-area-inset-right));
+}
+
+/* Con pantalla táctil, los botones de los menús miden al menos 44 px de alto. */
+.is-touch .btn,
+.is-touch .radio-row,
+.is-touch .toggle {
+  min-height: 44px;
+}
+
+/* HUD con controles táctiles: la velocidad y el derrape suben a la derecha y el minimapa se reduce sobre
+   el grupo de botones de la izquierda, para que los dedos no tapen nada importante. */
+.is-touch .hud-speed {
+  bottom: auto;
+  top: calc(max(12px, env(safe-area-inset-top)) + 56px);
+  right: max(12px, env(safe-area-inset-right));
+}
+
+.is-touch .hud-drift {
+  bottom: auto;
+  top: calc(max(12px, env(safe-area-inset-top)) + 128px);
+  right: max(12px, env(safe-area-inset-right));
+}
+
+.is-touch .minimap {
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 128px);
+  transform: scale(0.7);
+  transform-origin: bottom left;
+}
+
+@media (max-height: 520px) {
+  .hud-times {
+    min-width: 150px;
+    padding: 4px 8px;
+    font-size: 0.82rem;
+  }
+
+  .hud-speed-value {
+    font-size: 1.8rem;
+  }
+
+  .is-touch .hud-drift {
+    top: calc(max(12px, env(safe-area-inset-top)) + 104px);
+  }
+
+  /* En pantallas muy bajas el minimapa taparía los tiempos: se oculta (no es información crítica). */
+  .is-touch .minimap {
+    display: none;
+  }
+
+  .panel {
+    padding: 16px 18px;
+  }
+}
+
+/* Aviso para girar el dispositivo: solo en vertical y con pantalla táctil. */
+.rotate-notice {
+  display: none;
+  grid-area: 1 / 1;
+  align-self: start;
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 2px solid var(--warning);
+  border-radius: 8px;
+  color: var(--warning);
+  font-weight: 700;
+  text-align: center;
+  z-index: 2;
+}
+
+@media (orientation: portrait) {
+  .is-touch .rotate-notice {
+    display: block;
+    /* Sin celda de la rejilla: así se coloca respecto al borde del overlay y no dentro del hueco. */
+    grid-area: auto;
+    position: absolute;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+    right: max(16px, env(safe-area-inset-right));
+  }
+
+  /* Hueco para el aviso: no tapa el principio de los menús. */
+  .is-touch .overlay {
+    padding-top: calc(max(8px, env(safe-area-inset-top)) + 84px);
+  }
+}

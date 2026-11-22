@@ -1,3 +1,10 @@
+import {
+  defaultTouchSettings,
+  TOUCH_OPACITY,
+  type TouchSettings,
+  type TouchSize,
+} from '../core/touch';
+import { clamp } from '../core/math';
 import { CAMERA, type Quality } from '../data/balance';
 import { TEXTS } from '../data/texts';
 import { defaultAssists, type AssistSettings } from '../game/assists';
@@ -28,7 +35,8 @@ function radioGroup<T extends string>(
 
 /**
  * Panel de ajustes: "Reducir movimiento", campo de visión, calidad gráfica, resolución dinámica, cámara, sonido (silencio,
- * volumen y música) y ayudas de conducción. Los cambios se aplican al momento.
+ * volumen y música), ayudas de conducción y controles táctiles (solo se ven con pantalla táctil). Los cambios
+ * se aplican al momento.
  */
 export class SettingsPanel {
   readonly root: HTMLElement;
@@ -46,8 +54,15 @@ export class SettingsPanel {
   private readonly braking: HTMLInputElement;
   private readonly autoRespawn: HTMLInputElement;
   private readonly backButton: HTMLButtonElement;
+  private readonly touchAuto: HTMLInputElement;
+  private readonly touchLeft: HTMLInputElement;
+  private readonly touchSize: Map<TouchSize, HTMLInputElement>;
+  private readonly touchOpacity: HTMLInputElement;
+  private readonly touchOpacityValue: HTMLElement;
   /** Ayudas actuales (cada interruptor cambia una y se guardan las tres juntas). */
   private assists: AssistSettings = defaultAssists();
+  /** Ajustes táctiles actuales (se guardan siempre juntos). */
+  private touch: TouchSettings = defaultTouchSettings();
 
   constructor(onChange: (patch: Partial<Settings>) => void, onBack: () => void) {
     const mute = toggle(
@@ -148,6 +163,51 @@ export class SettingsPanel {
     this.steering = steering.input;
     this.braking = braking.input;
     this.autoRespawn = respawn.input;
+    // Controles táctiles: cada control cambia un campo y se guarda el objeto completo.
+    const setTouch = (patch: Partial<TouchSettings>): void => {
+      this.touch = { ...this.touch, ...patch };
+      onChange({ touch: { ...this.touch } });
+    };
+    const touchAuto = toggle(
+      TEXTS.settings.touchAutoThrottle,
+      true,
+      (autoThrottle) => setTouch({ autoThrottle }),
+      TEXTS.settings.touchAutoThrottleHint,
+    );
+    const touchLeft = toggle(
+      TEXTS.settings.touchLeftHanded,
+      false,
+      (leftHanded) => setTouch({ leftHanded }),
+      TEXTS.settings.touchLeftHandedHint,
+    );
+    const touchSize = radioGroup<TouchSize>(
+      TEXTS.settings.touchSize,
+      'touch-size',
+      TEXTS.settings.touchSizes,
+      (size) => setTouch({ size }),
+      TEXTS.settings.touchSizeHint,
+    );
+    this.touchAuto = touchAuto.input;
+    this.touchLeft = touchLeft.input;
+    this.touchSize = touchSize.inputs;
+    this.touchOpacity = el('input', {
+      attrs: {
+        type: 'range',
+        min: String(TOUCH_OPACITY.min),
+        max: String(TOUCH_OPACITY.max),
+        step: String(TOUCH_OPACITY.step),
+        id: 'touch-opacity-input',
+      },
+    });
+    this.touchOpacityValue = el('output', { attrs: { for: 'touch-opacity-input' } });
+    this.touchOpacity.addEventListener('input', () => {
+      const raw = Number(this.touchOpacity.value);
+      const opacity = Number.isFinite(raw)
+        ? clamp(Math.round(raw), TOUCH_OPACITY.min, TOUCH_OPACITY.max)
+        : TOUCH_OPACITY.default;
+      setText(this.touchOpacityValue, `${opacity}${TEXTS.settings.touchOpacityUnit}`);
+      setTouch({ opacity });
+    });
     this.backButton = button(TEXTS.settings.back, onBack, 'btn btn-primary');
     this.root = el(
       'section',
@@ -176,6 +236,21 @@ export class SettingsPanel {
           braking.root,
           respawn.root,
         ]),
+        el('fieldset', { className: 'assists only-touch' }, [
+          el('legend', { text: TEXTS.settings.touchTitle }),
+          touchAuto.root,
+          touchLeft.root,
+          touchSize.root,
+          el('div', { className: 'range' }, [
+            el('label', {
+              text: TEXTS.settings.touchOpacity,
+              attrs: { for: 'touch-opacity-input' },
+            }),
+            this.touchOpacity,
+            this.touchOpacityValue,
+          ]),
+          el('small', { className: 'hint', text: TEXTS.settings.touchOpacityHint }),
+        ]),
         el('div', { className: 'actions' }, [this.backButton]),
       ],
     );
@@ -198,6 +273,13 @@ export class SettingsPanel {
     this.steering.checked = settings.assists.steering;
     this.braking.checked = settings.assists.braking;
     this.autoRespawn.checked = settings.assists.autoRespawn;
+    this.touch = { ...settings.touch };
+    this.touchAuto.checked = settings.touch.autoThrottle;
+    this.touchLeft.checked = settings.touch.leftHanded;
+    const size = this.touchSize.get(settings.touch.size);
+    if (size) size.checked = true;
+    this.touchOpacity.value = String(settings.touch.opacity);
+    setText(this.touchOpacityValue, `${settings.touch.opacity}${TEXTS.settings.touchOpacityUnit}`);
     setVisible(this.root, true);
     this.backButton.focus({ preventScroll: true });
   }

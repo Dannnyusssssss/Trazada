@@ -26,6 +26,23 @@ export const TEXTS = {
     warning:
       'Este juego tiene movimiento de cámara y efectos de luz. Si te molestan, activa «Reducir movimiento». No contiene violencia.',
     playHint: 'Haz clic en «Jugar» o pulsa Intro para empezar.',
+    touchHint: 'Toca «Jugar» para empezar.',
+    touchControlsTitle: 'En pantalla táctil',
+    touchControls:
+      'Abajo a la izquierda, los botones de girar a la izquierda y a la derecha. Abajo a la derecha, frenar y marcha atrás, acelerar y el freno de mano (FM). El coche acelera solo; se puede cambiar en Ajustes. Arriba, reaparecer, cambiar de cámara y pausa.',
+  },
+  /** Controles táctiles: icono visible y nombre accesible de cada botón. */
+  touch: {
+    groupLabel: 'Controles táctiles',
+    left: { icon: '◀', label: 'Girar a la izquierda' },
+    right: { icon: '▶', label: 'Girar a la derecha' },
+    throttle: { icon: '▲', label: 'Acelerar' },
+    brake: { icon: '▼', label: 'Frenar y marcha atrás' },
+    handbrake: { icon: 'FM', label: 'Freno de mano' },
+    respawn: { icon: '↺', label: 'Reaparecer' },
+    camera: { icon: 'CAM', label: 'Cambiar de cámara' },
+    pause: { icon: 'II', label: 'Pausa' },
+    rotate: 'Gira el dispositivo en horizontal para jugar.',
   },
   select: {
     title: 'Elige modo, circuito y coche',
@@ -86,8 +103,9 @@ export const TEXTS = {
     settings: 'Ajustes',
     menu: 'Menú principal',
     hint: 'Pulsa Esc o P para continuar.',
+    touchHint: 'Toca «Continuar» para seguir.',
     focusLost:
-      'El juego se pausó porque salió de la ventana. Haz clic en «Continuar» para seguir jugando.',
+      'El juego se pausó porque salió de la ventana. Pulsa «Continuar» para seguir jugando.',
   },
   settings: {
     title: 'Ajustes',
@@ -119,6 +137,17 @@ export const TEXTS = {
     camera: 'Cámara',
     cameraOptions: { chase: 'Detrás del coche', high: 'Alta' },
     cameraHint: 'También se cambia con la tecla C durante la carrera.',
+    touchTitle: 'Controles táctiles',
+    touchAutoThrottle: 'Aceleración automática',
+    touchAutoThrottleHint: 'El coche acelera solo; mantén ▼ para frenar o ir marcha atrás.',
+    touchLeftHanded: 'Modo zurdo',
+    touchLeftHandedHint: 'Pone la dirección a la derecha y los pedales a la izquierda.',
+    touchSize: 'Tamaño de los botones',
+    touchSizes: { small: 'Pequeño', medium: 'Mediano', large: 'Grande' },
+    touchSizeHint: 'Todos los tamaños miden al menos 44 px.',
+    touchOpacity: 'Opacidad de los botones',
+    touchOpacityUnit: ' %',
+    touchOpacityHint: 'El icono y el borde siempre se ven del todo; solo cambia el relleno.',
     back: 'Volver',
   },
   hud: {

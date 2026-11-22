@@ -52,6 +52,10 @@ export class StartScreen {
               el('span', { text: TEXTS.start.gamepadLabel }),
             ]),
             controls,
+            el('div', { className: 'only-touch' }, [
+              el('h3', { text: TEXTS.start.touchControlsTitle }),
+              el('p', { text: TEXTS.start.touchControls }),
+            ]),
           ]),
           el('div', {}, [
             el('h2', { text: TEXTS.start.rulesTitle }),
@@ -67,7 +71,8 @@ export class StartScreen {
           this.playButton,
           button(TEXTS.start.settings, actions.onSettings),
         ]),
-        el('p', { className: 'hint', text: TEXTS.start.playHint }),
+        el('p', { className: 'hint only-keys', text: TEXTS.start.playHint }),
+        el('p', { className: 'hint only-touch', text: TEXTS.start.touchHint }),
       ],
     );
   }
