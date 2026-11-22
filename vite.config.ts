@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vite';
+import { escapeHtml } from './src/core/html.ts';
 import { META } from './src/data/meta.ts';
 
 /**
@@ -11,8 +12,44 @@ function gameMetaPlugin(): Plugin {
     name: 'game-meta',
     transformIndexHtml(html) {
       return html
-        .replaceAll('%GAME_TITLE%', META.title)
-        .replaceAll('%GAME_DESCRIPTION%', META.description);
+        .replaceAll('%GAME_TITLE%', escapeHtml(META.title))
+        .replaceAll('%GAME_DESCRIPTION%', escapeHtml(META.description));
+    },
+  };
+}
+
+/**
+ * Política de seguridad de contenido del juego publicado: solo recursos del propio origen, sin scripts ni
+ * estilos en línea, sin plugins y sin formularios. GitHub Pages no permite cabeceras propias, así que va
+ * como <meta>; eso no cubre frame-ancestors, HSTS, nosniff ni Permissions-Policy. Solo se aplica al build:
+ * el servidor de desarrollo necesita scripts en línea y una conexión de recarga en caliente.
+ */
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join('; ');
+
+/** Añade la política de seguridad y la de referencia justo después de <meta charset> en el build. */
+function securityMetaPlugin(): Plugin {
+  return {
+    name: 'security-meta',
+    apply: 'build',
+    transformIndexHtml(html) {
+      const charset = '<meta charset="UTF-8" />';
+      if (!html.includes(charset))
+        throw new Error('index.html debe empezar con <meta charset="UTF-8" />');
+      const tags = [
+        charset,
+        `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}" />`,
+        '<meta name="referrer" content="strict-origin-when-cross-origin" />',
+      ];
+      return html.replace(charset, tags.join('\n    '));
     },
   };
 }
@@ -39,7 +76,7 @@ function licenseBannerPlugin(): Plugin {
 export default defineConfig({
   // Rutas relativas: el juego funciona bajo cualquier subruta de GitHub Pages.
   base: './',
-  plugins: [gameMetaPlugin(), licenseBannerPlugin()],
+  plugins: [gameMetaPlugin(), securityMetaPlugin(), licenseBannerPlugin()],
   build: {
     target: 'es2022',
     outDir: 'dist',
