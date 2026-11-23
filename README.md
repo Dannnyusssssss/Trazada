@@ -3,7 +3,7 @@
 Carreras arcade en 3D low-poly para el navegador. Encuentra la trazada perfecta en cada curva, bate a tu propio
 fantasma en la contrarreloj y gana carreras contra cinco rivales.
 
-![Portada de Trazada](public/cover.png)
+![Portada de Trazada](docs/cover.png)
 
 ## Cómo se juega
 

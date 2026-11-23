@@ -7,7 +7,7 @@ Código, arte procedural, textos y sonido de Trazada: **Todos los derechos reser
 El juego no usa recursos externos: la geometría se genera por código, las texturas se dibujan con Canvas y el
 sonido se sintetiza con WebAudio. El favicon se genera por código.
 
-La portada (`public/cover.png`, 1280×720) es una captura del propio juego (parrilla de salida en Puerto Neón) con
+La portada (`docs/cover.png`, 1280×720) es una captura del propio juego (parrilla de salida en Puerto Neón) con
 el título y un subtítulo superpuestos. El texto se dibujó con una fuente del sistema y forma parte de la imagen:
 no se incluye ni se distribuye ningún archivo de fuente.
 
