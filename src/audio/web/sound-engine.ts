@@ -3,6 +3,7 @@ import { AUDIO } from '../../data/balance';
 import type { EngineVoice } from '../engine';
 import { MusicSequencer, type MusicNote } from '../music';
 import type { Cue } from '../sfx';
+import { busGain } from '../volume';
 
 /**
  * Adaptador WebAudio: aplica a nodos de audio los niveles que calcula la lógica pura de src/audio.
@@ -72,6 +73,8 @@ export class SoundEngine {
   private paused = true;
   private volume: number = AUDIO.defaultVolume;
   private musicOn = true;
+  private musicVolume: number = AUDIO.defaultBusVolume;
+  private sfxVolume: number = AUDIO.defaultBusVolume;
   private sequencer = new MusicSequencer(0x7a2ada);
   private musicStep = 0;
   private musicTime = 0;
@@ -122,6 +125,7 @@ export class SoundEngine {
     limiter.connect(this.master);
     this.master.connect(ctx.destination);
     this.sfxBus = ctx.createGain();
+    this.sfxBus.gain.value = busGain(1, this.sfxVolume);
     this.musicBus = ctx.createGain();
     this.musicBus.gain.value = 0;
     this.sfxBus.connect(compressor);
@@ -212,11 +216,23 @@ export class SoundEngine {
     this.applyVolume();
   }
 
+  /** Volumen de la música y de los efectos, 0–100 (relativos al general). */
+  setBusVolumes(music: number, sfx: number): void {
+    this.musicVolume = music;
+    this.sfxVolume = sfx;
+    const ctx = this.ctx;
+    if (ctx && this.sfxBus) {
+      this.sfxBus.gain.setTargetAtTime(busGain(1, sfx), ctx.currentTime, 0.08);
+    }
+    this.setMusic(this.musicOn);
+  }
+
   setMusic(on: boolean): void {
     this.musicOn = on;
     const ctx = this.ctx;
     if (ctx && this.musicBus) {
-      this.musicBus.gain.setTargetAtTime(on ? AUDIO.musicLevel : 0, ctx.currentTime, 0.3);
+      const target = on ? busGain(AUDIO.musicLevel, this.musicVolume) : 0;
+      this.musicBus.gain.setTargetAtTime(target, ctx.currentTime, 0.3);
     }
   }
 
