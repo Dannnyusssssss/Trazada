@@ -53,13 +53,37 @@ export function applyDeadzone(value: number, deadzone: number): number {
   return (Math.sign(v) * (magnitude - deadzone)) / (1 - deadzone);
 }
 
-/** Controles analógicos del coche a partir de una lectura del mando. Escribe en `out` y lo devuelve. */
-export function padToControls(pad: GamepadSnapshot, out: CarControls): CarControls {
+/** Ajustes del stick en fracciones: zona muerta 0.05–0.30 y sensibilidad 0.5–1.5. */
+export interface PadTuning {
+  deadzone: number;
+  sensitivity: number;
+}
+
+export function padTuningFromPercent(deadzonePct: number, sensitivityPct: number): PadTuning {
+  return { deadzone: deadzonePct / 100, sensitivity: sensitivityPct / 100 };
+}
+
+function finiteClamp(value: number, min: number, max: number, fallback: number): number {
+  return clamp(Number.isFinite(value) ? value : fallback, min, max);
+}
+
+/**
+ * Controles analógicos del coche a partir de una lectura del mando. Escribe en `out` y lo devuelve.
+ * Con `tuning`, tras la zona muerta el stick sigue la curva |v| ** (1 / sensibilidad).
+ */
+export function padToControls(
+  pad: GamepadSnapshot,
+  out: CarControls,
+  tuning?: PadTuning,
+): CarControls {
+  const deadzone = tuning ? finiteClamp(tuning.deadzone, 0.05, 0.3, PAD_DEADZONE) : PAD_DEADZONE;
+  const sensitivity = tuning ? finiteClamp(tuning.sensitivity, 0.5, 1.5, 1) : 1;
   const button = (i: number): number => clamp(pad.buttons[i] ?? 0, 0, 1);
   out.throttle = applyDeadzone(button(PAD.throttle), TRIGGER_DEADZONE);
   out.brake = applyDeadzone(button(PAD.brake), TRIGGER_DEADZONE);
   // Stick a la izquierda (eje negativo) = girar a la izquierda (dirección positiva).
-  const stick = applyDeadzone(pad.axes[PAD.steerAxis] ?? 0, PAD_DEADZONE);
+  let stick = applyDeadzone(pad.axes[PAD.steerAxis] ?? 0, deadzone);
+  if (sensitivity !== 1) stick = Math.sign(stick) * Math.abs(stick) ** (1 / sensitivity);
   let steer = stick === 0 ? 0 : -stick;
   if (button(PAD.dpadLeft) > PRESS_THRESHOLD) steer = 1;
   if (button(PAD.dpadRight) > PRESS_THRESHOLD) steer = -1;

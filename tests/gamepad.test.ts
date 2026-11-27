@@ -6,6 +6,7 @@ import {
   applyDeadzone,
   mergeControls,
   padToControls,
+  padTuningFromPercent,
   type GamepadSnapshot,
 } from '../src/core/gamepad';
 import { createControls, type Action } from '../src/core/input';
@@ -94,5 +95,49 @@ describe('botones de un solo disparo', () => {
     buttons.update(snapshot({}, { [PAD.camera]: 1 }), out);
     buttons.clear();
     expect(buttons.update(snapshot({}, { [PAD.camera]: 1 }), out)).toEqual(['camera']);
+  });
+});
+
+describe('padToControls con ajustes', () => {
+  it('sin ajustes equivale al comportamiento por defecto', () => {
+    for (const v of [-1, -0.6, -0.2, 0, 0.1, 0.4, 1]) {
+      const a = padToControls(snapshot({ [PAD.steerAxis]: v }), createControls());
+      const b = padToControls(snapshot({ [PAD.steerAxis]: v }), createControls(), {
+        deadzone: PAD_DEADZONE,
+        sensitivity: 1,
+      });
+      expect(b.steer).toBeCloseTo(a.steer, 12);
+    }
+  });
+
+  it('una zona muerta mayor ignora más recorrido', () => {
+    const pad = snapshot({ [PAD.steerAxis]: 0.2 });
+    expect(padToControls(pad, createControls()).steer).not.toBe(0);
+    expect(padToControls(pad, createControls(), padTuningFromPercent(30, 100)).steer).toBe(0);
+  });
+
+  it('la sensibilidad cambia la curva sin tocar los extremos', () => {
+    const half = snapshot({ [PAD.steerAxis]: -0.575 });
+    const lin = padToControls(half, createControls()).steer;
+    const high = padToControls(half, createControls(), padTuningFromPercent(15, 150)).steer;
+    const low = padToControls(half, createControls(), padTuningFromPercent(15, 50)).steer;
+    expect(high).toBeGreaterThan(lin);
+    expect(low).toBeLessThan(lin);
+    const full = snapshot({ [PAD.steerAxis]: -1 });
+    expect(padToControls(full, createControls(), padTuningFromPercent(15, 50)).steer).toBeCloseTo(
+      1,
+      9,
+    );
+  });
+
+  it('recorta los valores fuera de rango y la cruceta sigue dando uno', () => {
+    const pad = snapshot({ [PAD.steerAxis]: 0.2 });
+    expect(padToControls(pad, createControls(), padTuningFromPercent(90, 100)).steer).toBe(0);
+    const half = snapshot({ [PAD.steerAxis]: 0.5 });
+    const a = padToControls(half, createControls(), { deadzone: 0, sensitivity: 100 });
+    const b = padToControls(half, createControls(), { deadzone: 0.05, sensitivity: 1.5 });
+    expect(a.steer).toBeCloseTo(b.steer, 12);
+    const dpad = snapshot({}, { [PAD.dpadLeft]: 1 });
+    expect(padToControls(dpad, createControls(), padTuningFromPercent(30, 50)).steer).toBe(1);
   });
 });
