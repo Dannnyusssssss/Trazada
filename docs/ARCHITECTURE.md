@@ -10,12 +10,12 @@ La idea central es separar la simulación, que es lógica pura y determinista, d
 |---|---|
 | `src/main.ts`, `src/app.ts` | Arranque y orquestador: pantallas, bucle de frames, pausa, ajustes y conexión de las piezas de `src/app/`. |
 | `src/app/` | Piezas del orquestador, cada una con una responsabilidad (ver abajo). |
-| `src/core/` | Utilidades sin dependencias del navegador: bucle de paso fijo (`loop.ts`), generador aleatorio con semilla (`rng.ts`), entrada (`input.ts`, `gamepad.ts`, `touch.ts`), matemáticas (`math.ts`), resolución dinámica y lectura de la URL. |
+| `src/core/` | Utilidades sin dependencias del navegador: bucle de paso fijo (`loop.ts`), generador aleatorio con semilla (`rng.ts`), entrada (`input.ts`, `gamepad.ts`, `touch.ts`), teclas configurables (`bindings.ts`), navegación de menús con el mando (`menu-nav.ts`), estadísticas de frame (`frame-stats.ts`), ciclo de pestañas (`cycle.ts`), matemáticas (`math.ts`), resolución dinámica y lectura de la URL. |
 | `src/game/` | Lógica de juego: pista, coche, vueltas y checkpoints, fantasma, conductores rivales (`rival-driver.ts`), colisiones, asistencias, escenario y el mundo (`world.ts`) con sus sistemas en `systems/`. |
 | `src/data/` | Datos tipados: circuitos, coches, rivales, balance, textos y metadatos. |
 | `src/render/` | Todo lo que usa Three.js: escena, mallas de pista, coches y escenario, cámara, partículas, minimapa y HUD. |
-| `src/ui/` | Menús y paneles en el DOM: inicio, selección, resultados, pausa y ajustes, y los botones táctiles (`touch-controls.ts`). |
-| `src/audio/` | Lógica pura del sonido (motor, efectos, música). `src/audio/web/` es el único adaptador a WebAudio. |
+| `src/ui/` | Menús y paneles en el DOM: inicio, selección, resultados, pausa y la ventana de ajustes con pestañas (`settings-panel.ts`, `tabs.ts`, `controls-tab.ts`, `form-controls.ts`), el panel de métricas (`metrics-overlay.ts`), la navegación de menús con el mando (`menu-gamepad.ts`) y los botones táctiles (`touch-controls.ts`). |
+| `src/audio/` | Lógica pura del sonido (motor, efectos, música y volumen de cada bus). `src/audio/web/` es el único adaptador a WebAudio. |
 | `src/save/` | Persistencia en `localStorage` con validación (`storage.ts`, `ghost-storage.ts`). |
 | `tests/` | Pruebas de Vitest; `tests/helpers/` contiene el piloto automático. |
 | `docs/` | Documentación pública. |
@@ -23,7 +23,7 @@ La idea central es separar la simulación, que es lógica pura y determinista, d
 ### Módulos de `src/app/`
 
 - `world-factory.ts`: crea el mundo de cada sesión con el circuito ya muestreado y una semilla por carrera.
-- `game-input.ts`: combina teclado y mando en unos controles únicos por paso de simulación.
+- `game-input.ts`: combina teclado, mando y pantalla táctil en unos controles únicos por paso de simulación, aplica las teclas configuradas, el suavizado de la dirección con teclado y los ajustes del stick (solo cambian la entrada, no la física), y lee el mando en los menús.
 - `race-view.ts`: mantiene las mallas, la cámara y el HUD de la carrera en curso.
 - `race-effects.ts`: humo, marcas de derrape y chispas a partir del estado del mundo.
 - `race-audio.ts`: prepara en cada frame la mezcla de sonido y se la pasa al motor de sonido.

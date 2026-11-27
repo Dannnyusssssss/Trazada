@@ -31,11 +31,24 @@ fantasma en la contrarreloj y gana carreras contra cinco rivales.
 | Pausa | Esc / P | Start | II |
 | Silenciar | M | — | Botón «Sonido» |
 
-Los menús se manejan con el teclado (flechas, Tab e Intro), con el ratón o tocando la pantalla.
+Las teclas son las de fábrica: se pueden cambiar en **Ajustes → Controles** (dos teclas por acción). Esc
+siempre pausa y Tab siempre saca el foco del juego, así que no se pueden asignar. En la misma pestaña se ajusta
+la respuesta de la dirección con teclado (directa, normal o suave) y la zona muerta y la sensibilidad del stick
+del mando. Estos ajustes solo cambian cómo se leen los controles: el coche se comporta igual y los récords
+siguen contando.
+
+Los menús se manejan con el teclado (flechas, Tab e Intro), con el ratón, tocando la pantalla o con el mando
+(cruceta o stick para moverse, A para aceptar, B para volver y LB/RB para cambiar de pestaña en Ajustes).
+
+**Ajustes.** Es una ventana con pestañas: Pantalla, Sonido, Controles, Conducción y Táctil (esta solo con
+pantalla táctil). Cada pestaña tiene un botón para volver a sus valores de fábrica.
+
+**Métricas.** F2 (o la casilla «Mostrar métricas» en Ajustes → Pantalla) muestra un panel pequeño con los FPS,
+el tiempo de frame, las llamadas de dibujo, los triángulos, la escala de resolución y la calidad gráfica.
 
 **Pantalla táctil.** Los botones aparecen solo en dispositivos táctiles (o tras el primer toque) y solo durante
 la carrera: dirección a la izquierda y pedales a la derecha. Se pueden usar varios dedos a la vez. En Ajustes →
-«Controles táctiles» se elige la aceleración automática (activada por defecto), el modo zurdo (dirección a la
+«Táctil» se elige la aceleración automática (activada por defecto), el modo zurdo (dirección a la
 derecha), el tamaño de los botones (todos de al menos 44 px) y la opacidad del relleno. En vertical, el juego
 pide girar el dispositivo y pausa la carrera. En dispositivos táctiles la calidad gráfica empieza en Baja.
 
@@ -46,8 +59,8 @@ pide girar el dispositivo y pausa la carrera. En dispositivos táctiles la calid
   activada la preferencia de reducir el movimiento.
 - Ningún efecto parpadea más de 3 veces por segundo.
 - Todo el juego se puede jugar sin sonido: cada aviso sonoro tiene también una señal en pantalla.
-- Campo de visión, calidad gráfica, resolución dinámica, volumen, música y ayudas de conducción (dirección,
-  frenado y reaparición automática) se pueden ajustar.
+- Campo de visión, calidad gráfica, resolución dinámica, volumen general, de la música y de los efectos,
+  música, teclas y ayudas de conducción (dirección, frenado y reaparición automática) se pueden ajustar.
 
 ## Privacidad
 

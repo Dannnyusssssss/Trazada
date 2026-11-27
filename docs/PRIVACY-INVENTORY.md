@@ -13,10 +13,13 @@ Se usa únicamente `localStorage`, en el propio navegador y en el propio disposi
 
 ### Clave `trazada:v1`
 
-- **Ajustes:** silencio, reducir movimiento, campo de visión, calidad gráfica, cámara elegida, volumen, música,
-  ayudas de conducción (dirección, frenado y reaparición automática), resolución dinámica, la escala de
-  resolución que esta haya dejado y los controles táctiles (aceleración automática, modo zurdo, tamaño y
-  opacidad de los botones).
+- **Ajustes:** silencio, reducir movimiento, campo de visión, calidad gráfica, cámara elegida, volumen general,
+  de la música y de los efectos, música, si se muestra el panel de métricas, ayudas de conducción (dirección,
+  frenado y reaparición automática), resolución dinámica, la escala de resolución que esta haya dejado, los
+  controles táctiles (aceleración automática, modo zurdo, tamaño y opacidad de los botones) y los controles
+  configurables (las teclas elegidas para cada acción, guardadas como códigos de tecla de una lista cerrada;
+  la respuesta de la dirección con teclado; la zona muerta y la sensibilidad del stick del mando). Al leerlos
+  se validan: lo que no es válido vuelve a su valor de fábrica.
 - **Última selección:** circuito, coche, modo de juego y dificultad.
 - **Progreso y mejores marcas:** la mejor vuelta por circuito y coche (en milisegundos) y el mejor puesto final
   en el modo Carrera por circuito y dificultad. De los tiempos se derivan las medallas y los circuitos
