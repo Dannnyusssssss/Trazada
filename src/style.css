@@ -878,3 +878,268 @@ h3 {
     padding-top: calc(max(8px, env(safe-area-inset-top)) + 84px);
   }
 }
+
+/* Hito 6: ventanas con cabecera, cuerpo con desplazamiento propio y pie; pestañas de ajustes. */
+
+.panel > h2:first-child {
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #3a4360;
+}
+
+.panel.window {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  padding: 0;
+  overflow: hidden;
+}
+
+.window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #3a4360;
+}
+
+.window-header h2 {
+  margin: 0;
+}
+
+.window-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 18px 12px;
+  /* Lo enfocado no queda bajo la fila fija de pestañas. */
+  scroll-padding-top: 64px;
+}
+
+.window-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  padding: 12px 18px;
+  border-top: 1px solid #3a4360;
+}
+
+.window-footer .hint {
+  margin-right: auto;
+}
+
+.window-status {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Vacía sigue en el árbol de accesibilidad (oculta con display no se anunciaría al llenarse), pero sin
+   ocupar sitio en el pie. */
+.window-status:empty {
+  position: absolute;
+}
+
+.btn-icon {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.tabs-list {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  /* Sin esto, el margen negativo de las pestañas crea un desplazamiento vertical en la fila. */
+  overflow-y: hidden;
+  padding-top: 8px;
+  background: #121727;
+  border-bottom: 2px solid #3a4360;
+}
+
+.tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  margin-bottom: -2px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tab:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.tab-panel {
+  padding-top: 6px;
+}
+
+.tab-panel h3 {
+  margin-top: 14px;
+}
+
+h4 {
+  margin: 14px 0 6px;
+  font-size: 0.95rem;
+}
+
+.tab-reset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed #3a4360;
+}
+
+.range-group {
+  margin: 12px 0;
+}
+
+.range-group .range {
+  margin: 0 0 2px;
+}
+
+/* Teclas configurables */
+
+.key-head,
+.key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9rem 9rem;
+  gap: 8px;
+  align-items: center;
+}
+
+.key-head {
+  margin-top: 10px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.key-row {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(58, 67, 96, 0.6);
+}
+
+.key-btn {
+  min-height: 44px;
+  padding: 6px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sin animación: el estado de captura se indica con color y texto, nunca con parpadeo. */
+.key-btn.is-capturing {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.key-status {
+  min-height: 1.4em;
+  margin: 8px 0;
+}
+
+.pad-map {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.pad-map dd {
+  margin: 0;
+}
+
+/* Pantallas bajas (móvil en horizontal): cabecera y pie compactos para dejar sitio al contenido. */
+@media (max-height: 520px) {
+  .window-header,
+  .window-footer {
+    padding: 4px 14px;
+  }
+
+  .window-header h2 {
+    font-size: 1rem;
+  }
+
+  .window-footer .hint {
+    display: none;
+  }
+
+  .tabs-list {
+    padding-top: 0;
+  }
+
+  .window-body {
+    padding: 0 14px 8px;
+    scroll-padding-top: 52px;
+  }
+}
+
+@media (max-width: 560px) {
+  .key-head,
+  .key-row {
+    grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem;
+  }
+}
+
+/* Panel de métricas (F2): pequeño, arriba en el centro, sin capturar el puntero. */
+
+.metrics-overlay {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 6;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #e8f2ff;
+  font:
+    12px/1.35 ui-monospace,
+    Consolas,
+    monospace;
+  pointer-events: none;
+}
+
+/* En pantallas estrechas o táctiles los paneles del HUD ocupan las esquinas de arriba: va abajo en el centro. */
+@media (max-width: 700px) {
+  .metrics-overlay {
+    top: auto;
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+
+.is-touch .metrics-overlay {
+  top: auto;
+  bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.metrics-text {
+  margin: 0;
+  white-space: pre;
+}

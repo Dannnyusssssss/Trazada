@@ -361,3 +361,122 @@ describe('ajustes táctiles (Hito 5)', () => {
     expect(defaults.settings.touch.opacity).toBe(60);
   });
 });
+
+describe('volúmenes por bus y métricas (Hito 6)', () => {
+  it('por defecto: música y efectos al 100 % y métricas ocultas', () => {
+    expect(defaults.settings.musicVolume).toBe(100);
+    expect(defaults.settings.sfxVolume).toBe(100);
+    expect(defaults.settings.showMetrics).toBe(false);
+  });
+
+  it('un guardado del Hito 5 (sin los campos nuevos) carga con los valores por defecto', () => {
+    const raw = JSON.stringify({ version: 1, settings: { volume: 40, music: false } });
+    const save = parseSave(raw, defaults);
+    expect(save.settings.volume).toBe(40);
+    expect(save.settings.music).toBe(false);
+    expect(save.settings.musicVolume).toBe(100);
+    expect(save.settings.sfxVolume).toBe(100);
+    expect(save.settings.showMetrics).toBe(false);
+  });
+
+  it('acepta valores válidos, redondea y sobrevive a la ida y vuelta', () => {
+    const raw = JSON.stringify({
+      version: 1,
+      settings: { musicVolume: 35.4, sfxVolume: 0, showMetrics: true },
+    });
+    const save = parseSave(raw, defaults);
+    expect(save.settings.musicVolume).toBe(35);
+    expect(save.settings.sfxVolume).toBe(0);
+    expect(save.settings.showMetrics).toBe(true);
+    expect(parseSave(serializeSave(save), defaults).settings).toEqual(save.settings);
+  });
+
+  it('descarta valores fuera de rango o de otro tipo', () => {
+    for (const bad of [-1, 101, 'alto', null, true, [50], { v: 50 }]) {
+      const raw = JSON.stringify({ version: 1, settings: { musicVolume: bad, sfxVolume: bad } });
+      const save = parseSave(raw, defaults);
+      expect(save.settings.musicVolume).toBe(100);
+      expect(save.settings.sfxVolume).toBe(100);
+    }
+    for (const bad of [1, 'true', null, [true], { on: true }]) {
+      const raw = JSON.stringify({ version: 1, settings: { showMetrics: bad } });
+      expect(parseSave(raw, defaults).settings.showMetrics).toBe(false);
+    }
+  });
+});
+
+describe('controles configurables (Hito 6)', () => {
+  it('por defecto: teclas de fábrica, dirección directa, zona muerta 15 % y sensibilidad 100 %', () => {
+    const controls = defaults.settings.controls;
+    expect(controls.keys.throttle).toEqual(['KeyW', 'ArrowUp']);
+    expect(controls.keyboardSteer).toBe('direct');
+    expect(controls.padDeadzone).toBe(15);
+    expect(controls.padSensitivity).toBe(100);
+  });
+
+  it('un guardado del Hito 5 (sin controles) carga con los de fábrica', () => {
+    const raw = JSON.stringify({ version: 1, settings: { fov: 80 } });
+    const save = parseSave(raw, defaults);
+    expect(save.settings.fov).toBe(80);
+    expect(save.settings.controls).toEqual(defaults.settings.controls);
+  });
+
+  it('guarda y recupera unas teclas cambiadas y los ajustes del stick', () => {
+    const keys = {
+      ...defaults.settings.controls.keys,
+      throttle: ['KeyI', null],
+      mute: ['KeyN', null],
+    };
+    const controls = { keys, keyboardSteer: 'smooth', padDeadzone: 22, padSensitivity: 130 };
+    const raw = JSON.stringify({ version: 1, settings: { controls } });
+    const save = parseSave(raw, defaults);
+    expect(save.settings.controls).toEqual(controls);
+    expect(parseSave(serializeSave(save), defaults).settings.controls).toEqual(controls);
+  });
+
+  it('un mapa manipulado vuelve entero al de fábrica sin tocar el resto de controles', () => {
+    const base = defaults.settings.controls.keys;
+    const hostile: unknown[] = [
+      { ...base, throttle: ['Tab', null] },
+      { ...base, pause: ['Escape', null] },
+      { ...base, brake: ['KeyW', null] },
+      { ...base, left: [null, null] },
+      { ...base, camera: ['F3', null] },
+      { ...base, respawn: ['x'.repeat(10_000), null] },
+      { ...base, mute: ['KeyM', 'KeyN', 'KeyB'] },
+      { throttle: ['KeyW', null] },
+      [base.throttle],
+      'KeyW',
+      null,
+    ];
+    for (const keys of hostile) {
+      const raw = JSON.stringify({ version: 1, settings: { controls: { keys, padDeadzone: 20 } } });
+      const save = parseSave(raw, defaults);
+      expect(save.settings.controls.keys).toEqual(base);
+      expect(save.settings.controls.padDeadzone).toBe(20);
+    }
+  });
+
+  it('rechaza la clave __proto__ en el mapa sin contaminar objetos', () => {
+    const raw = `{"version":1,"settings":{"controls":{"keys":{"__proto__":{"polluted":true}}}}}`;
+    const save = parseSave(raw, defaults);
+    expect(save.settings.controls.keys).toEqual(defaults.settings.controls.keys);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it('descarta respuesta, zona muerta y sensibilidad fuera de lista o de rango, y redondea al paso', () => {
+    const bad = { keyboardSteer: 'turbo', padDeadzone: 50, padSensitivity: 10 };
+    let save = parseSave(JSON.stringify({ version: 1, settings: { controls: bad } }), defaults);
+    expect(save.settings.controls.keyboardSteer).toBe('direct');
+    expect(save.settings.controls.padDeadzone).toBe(15);
+    expect(save.settings.controls.padSensitivity).toBe(100);
+    const odd = { padDeadzone: 12.6, padSensitivity: 124 };
+    save = parseSave(JSON.stringify({ version: 1, settings: { controls: odd } }), defaults);
+    expect(save.settings.controls.padDeadzone).toBe(13);
+    expect(save.settings.controls.padSensitivity).toBe(120);
+    for (const controls of ['x', 3, [1], null]) {
+      save = parseSave(JSON.stringify({ version: 1, settings: { controls } }), defaults);
+      expect(save.settings.controls).toEqual(defaults.settings.controls);
+    }
+  });
+});

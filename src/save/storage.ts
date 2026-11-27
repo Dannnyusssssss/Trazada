@@ -6,6 +6,7 @@ import {
   GRID,
   RACE,
   type Difficulty,
+  CONTROLS,
   type Quality,
 } from '../data/balance';
 import { defaultAssists, type AssistSettings } from '../game/assists';
@@ -16,6 +17,8 @@ import {
   type TouchSettings,
 } from '../core/touch';
 import type { GameMode } from '../game/world';
+import { createDefaultKeyMap, parseKeyMap, type KeyMap } from '../core/bindings';
+import type { KeyboardSteerResponse } from '../core/input';
 import { META, SAVE_KEY } from '../data/meta';
 
 /**
@@ -41,6 +44,13 @@ export interface Settings {
   volume: number;
   /** Música generativa activada. */
   music: boolean;
+  /** Volumen de la música y de los efectos (0–100), relativos al general (Hito 6). */
+  musicVolume: number;
+  sfxVolume: number;
+  /** Panel de métricas de rendimiento visible (Hito 6). */
+  showMetrics: boolean;
+  /** Teclas, respuesta de la dirección con teclado y ajustes del stick (Hito 6). */
+  controls: ControlSettings;
   /** Asistencias de conducción. */
   assists: AssistSettings;
   /** Resolución dinámica activada (baja la resolución interna si los FPS caen de forma sostenida). */
@@ -49,6 +59,50 @@ export interface Settings {
   renderScale: number;
   /** Controles táctiles: distribución, tamaño, opacidad y aceleración automática. */
   touch: TouchSettings;
+}
+
+/** Controles configurables (Hito 6). Solo cambian cómo se leen las entradas, nunca la física. */
+export interface ControlSettings {
+  /** Dos teclas por acción (códigos físicos de una lista blanca). */
+  keys: KeyMap;
+  keyboardSteer: KeyboardSteerResponse;
+  /** Zona muerta (%) y sensibilidad (%) del stick del mando. */
+  padDeadzone: number;
+  padSensitivity: number;
+}
+
+const KEYBOARD_STEER: readonly KeyboardSteerResponse[] = ['direct', 'normal', 'smooth'];
+
+export function defaultControls(): ControlSettings {
+  return {
+    keys: createDefaultKeyMap(),
+    keyboardSteer: CONTROLS.keyboardSteerDefault,
+    padDeadzone: CONTROLS.padDeadzone.default,
+    padSensitivity: CONTROLS.padSensitivity.default,
+  };
+}
+
+/** Entero dentro de un rango con paso, o null si no es un número válido. */
+function stepped(value: unknown, range: { min: number; max: number; step: number }): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  if (value < range.min || value > range.max) return null;
+  return Math.round((value - range.min) / range.step) * range.step + range.min;
+}
+
+/** Valida los controles guardados campo por campo; lo que no es válido vuelve a su valor por defecto. */
+function parseControls(raw: unknown, out: ControlSettings): void {
+  if (!isRecord(raw)) return;
+  // Un mapa de teclas inválido (duplicados, teclas no permitidas, acción sin tecla) vuelve entero al de fábrica.
+  const keys = parseKeyMap(raw.keys);
+  if (keys) out.keys = keys;
+  const steer = raw.keyboardSteer;
+  if (typeof steer === 'string' && (KEYBOARD_STEER as readonly string[]).includes(steer)) {
+    out.keyboardSteer = steer as KeyboardSteerResponse;
+  }
+  const deadzone = stepped(raw.padDeadzone, CONTROLS.padDeadzone);
+  if (deadzone !== null) out.padDeadzone = deadzone;
+  const sensitivity = stepped(raw.padSensitivity, CONTROLS.padSensitivity);
+  if (sensitivity !== null) out.padSensitivity = sensitivity;
 }
 
 export interface SaveData {
@@ -89,6 +143,10 @@ export function defaultSave(prefersReducedMotion: boolean, prefersTouch = false)
       difficulty: 'normal',
       volume: AUDIO.defaultVolume,
       music: true,
+      musicVolume: AUDIO.defaultBusVolume,
+      sfxVolume: AUDIO.defaultBusVolume,
+      showMetrics: false,
+      controls: defaultControls(),
       assists: defaultAssists(),
       dynamicResolution: true,
       renderScale: 1,
@@ -111,6 +169,13 @@ function validPosition(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= GRID.slots;
 }
 
+/** Porcentaje entero en 0–100, o null si no es un número válido. */
+function percent(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
+    ? Math.round(value)
+    : null;
+}
+
 function validLapMs(value: unknown): value is number {
   return (
     typeof value === 'number' &&
@@ -127,6 +192,7 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
       ...defaults.settings,
       assists: { ...defaults.settings.assists },
       touch: { ...defaults.settings.touch },
+      controls: { ...defaults.settings.controls },
     },
     bestLaps: {},
     raceBest: {},
@@ -180,6 +246,14 @@ export function parseSave(raw: string | null, defaults: SaveData): SaveData {
       result.settings.volume = Math.round(volume);
     }
     if (typeof settings.music === 'boolean') result.settings.music = settings.music;
+    // Campos añadidos en el Hito 6.
+    const musicVolume = percent(settings.musicVolume);
+    if (musicVolume !== null) result.settings.musicVolume = musicVolume;
+    const sfxVolume = percent(settings.sfxVolume);
+    if (sfxVolume !== null) result.settings.sfxVolume = sfxVolume;
+    if (typeof settings.showMetrics === 'boolean')
+      result.settings.showMetrics = settings.showMetrics;
+    parseControls(settings.controls, result.settings.controls);
     const assists = settings.assists;
     if (isRecord(assists)) {
       for (const key of ['steering', 'braking', 'autoRespawn'] as const) {

@@ -1,3 +1,4 @@
+import { actionKeysLabel, DEFAULT_KEY_MAP, type KeyMap } from '../core/bindings';
 import { TEXTS } from '../data/texts';
 import { button, el, setText, setVisible } from './dom';
 
@@ -13,11 +14,14 @@ export interface PauseActions {
 export class PauseMenu {
   readonly root: HTMLElement;
   private readonly resumeButton: HTMLButtonElement;
+  private readonly settingsButton: HTMLButtonElement;
   private readonly message: HTMLElement;
   private readonly touchMessage: HTMLElement;
+  private keys: KeyMap = DEFAULT_KEY_MAP;
 
   constructor(actions: PauseActions) {
     this.resumeButton = button(TEXTS.pause.resume, actions.onResume, 'btn btn-primary');
+    this.settingsButton = button(TEXTS.pause.settings, actions.onSettings);
     this.message = el('p', { className: 'hint' });
     this.touchMessage = el('p', { className: 'hint only-touch', text: TEXTS.pause.touchHint });
     this.root = el(
@@ -31,20 +35,29 @@ export class PauseMenu {
           this.resumeButton,
           button(TEXTS.pause.restart, actions.onRestart),
           button(TEXTS.pause.select, actions.onSelect),
-          button(TEXTS.pause.settings, actions.onSettings),
+          this.settingsButton,
           button(TEXTS.pause.menu, actions.onMenu),
         ]),
       ],
     );
   }
 
-  show(focusLost: boolean): void {
-    setText(this.message, focusLost ? TEXTS.pause.focusLost : TEXTS.pause.hint);
+  /** `fromSettings`: se vuelve de los ajustes y el foco regresa a su botón. */
+  show(focusLost: boolean, fromSettings = false): void {
+    setText(
+      this.message,
+      focusLost ? TEXTS.pause.focusLost : TEXTS.pause.hint(actionKeysLabel(this.keys, 'pause')),
+    );
     // La pista de teclas solo se ve sin pantalla táctil; el aviso de foco perdido, siempre.
     this.message.classList.toggle('only-keys', !focusLost);
     setVisible(this.touchMessage, !focusLost);
     setVisible(this.root, true);
-    this.resumeButton.focus({ preventScroll: true });
+    (fromSettings ? this.settingsButton : this.resumeButton).focus({ preventScroll: true });
+  }
+
+  /** Teclas configuradas (para la pista «Pulsa … para continuar»). */
+  setKeys(map: KeyMap): void {
+    this.keys = map;
   }
 
   hide(): void {

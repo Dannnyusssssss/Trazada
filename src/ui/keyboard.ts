@@ -5,7 +5,12 @@ export interface KeyboardHandlers {
   isDriving: () => boolean;
   /** Acción de un disparo (pausa, silencio, cámara). `driving` indica si se estaba conduciendo. */
   onAction: (action: Action, driving: boolean) => void;
+  /** F2: muestra u oculta el panel de métricas (tecla fija; no se bloquea su acción por defecto). */
+  onToggleMetrics: () => void;
 }
+
+/** Tecla fija del panel de métricas. F3 no sirve: abre «Buscar» en los navegadores. */
+export const METRICS_KEY = 'F2';
 
 function isEditable(target: EventTarget | null): boolean {
   return (
@@ -23,6 +28,10 @@ export function attachKeyboard(input: InputState, handlers: KeyboardHandlers): v
   window.addEventListener('keydown', (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const driving = handlers.isDriving();
+    if (event.code === METRICS_KEY) {
+      if (!event.repeat) handlers.onToggleMetrics();
+      return;
+    }
     // En campos de ajustes o de depuración las teclas son para el campo (salvo Esc en los menús).
     if (isEditable(event.target) && !(event.code === 'Escape' && !driving)) return;
     if (driving) {
@@ -36,8 +45,9 @@ export function attachKeyboard(input: InputState, handlers: KeyboardHandlers): v
       return;
     }
     if (event.repeat) return;
-    if (event.code === 'Escape' || event.code === 'KeyP') handlers.onAction('pause', false);
-    else if (event.code === 'KeyM') handlers.onAction('mute', false);
+    // En los menús solo cuentan pausa (Esc o su tecla configurada) y silencio.
+    const action = input.actionFor(event.code);
+    if (action === 'pause' || action === 'mute') handlers.onAction(action, false);
   });
   window.addEventListener('keyup', (event) => {
     input.keyUp(event.code);

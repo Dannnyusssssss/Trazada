@@ -26,7 +26,14 @@ export class Menus {
   readonly select: SelectScreen;
   readonly results: ResultsScreen;
 
-  constructor(overlay: HTMLElement, actions: MenuActions, reducedMotion: boolean) {
+  private readonly screens: readonly { root: HTMLElement }[];
+
+  constructor(
+    overlay: HTMLElement,
+    actions: MenuActions,
+    reducedMotion: boolean,
+    defaults: () => Settings,
+  ) {
     this.start = new StartScreen(
       {
         onPlay: () => actions.openSelect(),
@@ -45,6 +52,7 @@ export class Menus {
     this.settings = new SettingsPanel(
       (patch) => actions.changeSettings(patch),
       () => actions.closeSettings(),
+      defaults,
     );
     this.select = new SelectScreen(
       (selection) => actions.onSelect(selection),
@@ -65,6 +73,13 @@ export class Menus {
     );
     this.pause.hide();
     this.settings.hide();
+    this.screens = [this.start, this.pause, this.settings, this.select, this.results];
+  }
+
+  /** La pantalla de menú visible (para navegar con el mando), o null si no hay ninguna. */
+  visibleRoot(): HTMLElement | null {
+    for (const screen of this.screens) if (!screen.root.hidden) return screen.root;
+    return null;
   }
 
   hideAll(): void {

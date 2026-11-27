@@ -277,6 +277,8 @@ export const EFFECTS = {
 export const AUDIO = {
   /** Volumen general por defecto (0–100). */
   defaultVolume: 60,
+  /** Volumen por defecto de la música y de los efectos (0–100, relativo al general). */
+  defaultBusVolume: 100,
   /** Ganancia de la mezcla a volumen 100: moderada, para no asustar. */
   masterGain: 0.5,
   /** Caja de cambios simulada: fin de cada marcha como fracción de la velocidad máxima. */
@@ -409,6 +411,19 @@ export const DYNAMIC_RESOLUTION = {
   settleSeconds: 2,
   /** Un frame más largo que esto es un tirón aislado (carga, otra pestaña) y no se mide (s). */
   maxFrameSeconds: 0.25,
+} as const;
+
+/** Ajustes de entrada del jugador (solo cambian cómo se leen los controles, nunca la física del coche). */
+export const CONTROLS = {
+  /** Velocidad a la que la dirección del teclado se acerca a la pulsada (1/s); 0 = directa. */
+  keyboardSteerRates: { direct: 0, normal: 9, smooth: 4.5 },
+  /** Al soltar o invertir la dirección, el suavizado va este múltiplo más rápido (vuelve antes al centro). */
+  keyboardSteerReturnFactor: 2,
+  keyboardSteerDefault: 'direct',
+  /** Zona muerta del stick (%). */
+  padDeadzone: { min: 5, max: 30, step: 1, default: 15 },
+  /** Sensibilidad del stick (%): 100 = lineal; más alta responde antes cerca del centro. */
+  padSensitivity: { min: 50, max: 150, step: 10, default: 100 },
 } as const;
 
 export const HUD = {

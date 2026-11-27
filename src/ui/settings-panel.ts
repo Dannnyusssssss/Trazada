@@ -1,290 +1,311 @@
-import {
-  defaultTouchSettings,
-  TOUCH_OPACITY,
-  type TouchSettings,
-  type TouchSize,
-} from '../core/touch';
-import { clamp } from '../core/math';
+import { TOUCH_OPACITY, type TouchSettings, type TouchSize } from '../core/touch';
 import { CAMERA, type Quality } from '../data/balance';
 import { TEXTS } from '../data/texts';
-import { defaultAssists, type AssistSettings } from '../game/assists';
+import type { AssistSettings } from '../game/assists';
 import type { Settings } from '../save/storage';
+import { ControlsTab } from './controls-tab';
 import { button, el, setText, setVisible, toggle } from './dom';
+import { radioGroup, rangeRow } from './form-controls';
+import { Tabs } from './tabs';
 
-/** Grupo de botones de opción nativo (las flechas cambian la opción). */
-function radioGroup<T extends string>(
-  legend: string,
-  name: string,
-  options: Readonly<Record<T, string>>,
-  onChange: (value: T) => void,
-  hint: string,
-): { root: HTMLElement; inputs: Map<T, HTMLInputElement> } {
-  const inputs = new Map<T, HTMLInputElement>();
-  const root = el('fieldset', { className: 'radio-row' }, [el('legend', { text: legend })]);
-  for (const [value, label] of Object.entries(options) as [T, string][]) {
-    const input = el('input', { attrs: { type: 'radio', name, value } });
-    input.addEventListener('change', () => {
-      if (input.checked) onChange(value);
-    });
-    inputs.set(value, input);
-    root.appendChild(el('label', { className: 'radio' }, [input, el('span', { text: label })]));
-  }
-  root.appendChild(el('small', { className: 'hint', text: hint }));
-  return { root, inputs };
-}
+type TabId = keyof typeof TEXTS.settings.tabs;
+
+/** Volumen: barras de 0 a 100 en pasos de 5. */
+const VOLUME_RANGE = { min: 0, max: 100, step: 5, unit: TEXTS.settings.volumeUnit } as const;
 
 /**
- * Panel de ajustes: "Reducir movimiento", campo de visión, calidad gráfica, resolución dinámica, cámara, sonido (silencio,
- * volumen y música), ayudas de conducción y controles táctiles (solo se ven con pantalla táctil). Los cambios
- * se aplican al momento.
+ * Ventana de ajustes con pestañas: Pantalla, Sonido, Controles, Conducción y Táctil (esta solo con pantalla
+ * táctil). Los cambios se aplican al momento; cada pestaña puede volver a sus valores de fábrica.
  */
 export class SettingsPanel {
   readonly root: HTMLElement;
-  private readonly mute: HTMLInputElement;
-  private readonly reduced: HTMLInputElement;
-  private readonly fov: HTMLInputElement;
-  private readonly fovValue: HTMLElement;
-  private readonly quality: Map<Quality, HTMLInputElement>;
-  private readonly dynamicResolution: HTMLInputElement;
-  private readonly camera: Map<'chase' | 'high', HTMLInputElement>;
-  private readonly volume: HTMLInputElement;
-  private readonly volumeValue: HTMLElement;
-  private readonly music: HTMLInputElement;
-  private readonly steering: HTMLInputElement;
-  private readonly braking: HTMLInputElement;
-  private readonly autoRespawn: HTMLInputElement;
-  private readonly backButton: HTMLButtonElement;
-  private readonly touchAuto: HTMLInputElement;
-  private readonly touchLeft: HTMLInputElement;
-  private readonly touchSize: Map<TouchSize, HTMLInputElement>;
-  private readonly touchOpacity: HTMLInputElement;
-  private readonly touchOpacityValue: HTMLElement;
-  /** Ayudas actuales (cada interruptor cambia una y se guardan las tres juntas). */
-  private assists: AssistSettings = defaultAssists();
-  /** Ajustes táctiles actuales (se guardan siempre juntos). */
-  private touch: TouchSettings = defaultTouchSettings();
+  private readonly tabs: Tabs;
+  private readonly controls: ControlsTab;
+  /** Avisos de la ventana (restaurar valores), anunciados por los lectores de pantalla. */
+  private readonly status = el('p', { className: 'hint window-status', attrs: { role: 'status' } });
+  /** Ajustes que muestra la ventana (se actualizan con cada cambio). */
+  private current: Settings;
+  /** Actualiza cada control a partir de `current`. */
+  private readonly syncers: ((settings: Settings) => void)[] = [];
 
-  constructor(onChange: (patch: Partial<Settings>) => void, onBack: () => void) {
-    const mute = toggle(
-      TEXTS.settings.mute,
-      false,
-      (muted) => onChange({ muted }),
-      TEXTS.settings.muteHint,
-    );
-    const reduced = toggle(
-      TEXTS.settings.reducedMotion,
-      false,
-      (reducedMotion) => onChange({ reducedMotion }),
-      TEXTS.settings.reducedMotionHint,
-    );
-    this.mute = mute.input;
-    this.reduced = reduced.input;
-    this.fov = el('input', {
-      attrs: {
-        type: 'range',
-        min: String(CAMERA.fovMin),
-        max: String(CAMERA.fovMax),
-        step: '1',
-        id: 'fov-input',
-      },
-    });
-    this.fovValue = el('output', { attrs: { for: 'fov-input' } });
-    this.fov.addEventListener('input', () => {
-      const fov = Number(this.fov.value);
-      setText(this.fovValue, `${fov}${TEXTS.settings.fovUnit}`);
-      onChange({ fov });
-    });
-    const quality = radioGroup<Quality>(
-      TEXTS.settings.quality,
-      'quality',
-      TEXTS.settings.qualityOptions,
-      (value) => onChange({ quality: value }),
-      TEXTS.settings.qualityHint,
-    );
-    const camera = radioGroup<'chase' | 'high'>(
-      TEXTS.settings.camera,
-      'camera',
-      TEXTS.settings.cameraOptions,
-      (value) => onChange({ camera: value }),
-      TEXTS.settings.cameraHint,
-    );
-    this.quality = quality.inputs;
-    this.camera = camera.inputs;
-    const dynamic = toggle(
-      TEXTS.settings.dynamicResolution,
-      true,
-      (on) => onChange({ dynamicResolution: on }),
-      TEXTS.settings.dynamicResolutionHint,
-    );
-    this.dynamicResolution = dynamic.input;
-
-    this.volume = el('input', {
-      attrs: { type: 'range', min: '0', max: '100', step: '5', id: 'volume-input' },
-    });
-    this.volumeValue = el('output', { attrs: { for: 'volume-input' } });
-    this.volume.addEventListener('input', () => {
-      const volume = Number(this.volume.value);
-      setText(this.volumeValue, `${volume}${TEXTS.settings.volumeUnit}`);
-      onChange({ volume });
-    });
-    const music = toggle(
-      TEXTS.settings.music,
-      true,
-      (on) => onChange({ music: on }),
-      TEXTS.settings.musicHint,
-    );
-    this.music = music.input;
-    // Cada interruptor cambia una ayuda; se guardan las tres juntas.
-    const assist = (key: keyof AssistSettings, label: string, hint: string) =>
-      toggle(
-        label,
-        false,
-        (on) => {
-          this.assists = { ...this.assists, [key]: on };
-          onChange({ assists: this.assists });
-        },
-        hint,
-      );
-    const steering = assist(
-      'steering',
-      TEXTS.settings.steeringAssist,
-      TEXTS.settings.steeringAssistHint,
-    );
-    const braking = assist(
-      'braking',
-      TEXTS.settings.brakingAssist,
-      TEXTS.settings.brakingAssistHint,
-    );
-    const respawn = assist(
-      'autoRespawn',
-      TEXTS.settings.autoRespawn,
-      TEXTS.settings.autoRespawnHint,
-    );
-    this.steering = steering.input;
-    this.braking = braking.input;
-    this.autoRespawn = respawn.input;
-    // Controles táctiles: cada control cambia un campo y se guarda el objeto completo.
-    const setTouch = (patch: Partial<TouchSettings>): void => {
-      this.touch = { ...this.touch, ...patch };
-      onChange({ touch: { ...this.touch } });
+  constructor(
+    onChange: (patch: Partial<Settings>) => void,
+    onBack: () => void,
+    private readonly defaults: () => Settings,
+  ) {
+    this.current = defaults();
+    const change = (patch: Partial<Settings>): void => {
+      this.current = { ...this.current, ...patch };
+      onChange(patch);
     };
-    const touchAuto = toggle(
-      TEXTS.settings.touchAutoThrottle,
-      true,
-      (autoThrottle) => setTouch({ autoThrottle }),
-      TEXTS.settings.touchAutoThrottleHint,
-    );
-    const touchLeft = toggle(
-      TEXTS.settings.touchLeftHanded,
-      false,
-      (leftHanded) => setTouch({ leftHanded }),
-      TEXTS.settings.touchLeftHandedHint,
-    );
-    const touchSize = radioGroup<TouchSize>(
-      TEXTS.settings.touchSize,
-      'touch-size',
-      TEXTS.settings.touchSizes,
-      (size) => setTouch({ size }),
-      TEXTS.settings.touchSizeHint,
-    );
-    this.touchAuto = touchAuto.input;
-    this.touchLeft = touchLeft.input;
-    this.touchSize = touchSize.inputs;
-    this.touchOpacity = el('input', {
-      attrs: {
-        type: 'range',
-        min: String(TOUCH_OPACITY.min),
-        max: String(TOUCH_OPACITY.max),
-        step: String(TOUCH_OPACITY.step),
-        id: 'touch-opacity-input',
-      },
+    const check = (
+      label: string,
+      hint: string,
+      get: (s: Settings) => boolean,
+      patch: (on: boolean) => Partial<Settings>,
+    ): HTMLElement => {
+      const t = toggle(label, false, (on) => change(patch(on)), hint);
+      this.syncers.push((s) => (t.input.checked = get(s)));
+      return t.root;
+    };
+    const radios = <T extends string>(
+      legend: string,
+      name: string,
+      options: Readonly<Record<T, string>>,
+      hint: string,
+      get: (s: Settings) => T,
+      patch: (value: T) => Partial<Settings>,
+    ): HTMLElement => {
+      const g = radioGroup(legend, name, options, (value) => change(patch(value)), hint);
+      this.syncers.push((s) => g.set(get(s)));
+      return g.root;
+    };
+    const range = (
+      options: Parameters<typeof rangeRow>[0],
+      get: (s: Settings) => number,
+      patch: (value: number) => Partial<Settings>,
+    ): HTMLElement => {
+      const r = rangeRow(options, (value) => change(patch(value)));
+      this.syncers.push((s) => r.set(get(s)));
+      return r.root;
+    };
+    const assist = (key: keyof AssistSettings, label: string, hint: string): HTMLElement =>
+      check(
+        label,
+        hint,
+        (s) => s.assists[key],
+        (on) => ({ assists: { ...this.current.assists, [key]: on } }),
+      );
+    const touch = (patch: Partial<TouchSettings>): Partial<Settings> => ({
+      touch: { ...this.current.touch, ...patch },
     });
-    this.touchOpacityValue = el('output', { attrs: { for: 'touch-opacity-input' } });
-    this.touchOpacity.addEventListener('input', () => {
-      const raw = Number(this.touchOpacity.value);
-      const opacity = Number.isFinite(raw)
-        ? clamp(Math.round(raw), TOUCH_OPACITY.min, TOUCH_OPACITY.max)
-        : TOUCH_OPACITY.default;
-      setText(this.touchOpacityValue, `${opacity}${TEXTS.settings.touchOpacityUnit}`);
-      setTouch({ opacity });
-    });
-    this.backButton = button(TEXTS.settings.back, onBack, 'btn btn-primary');
+
+    const display = this.panel('display', [
+      check(
+        TEXTS.settings.reducedMotion,
+        TEXTS.settings.reducedMotionHint,
+        (s) => s.reducedMotion,
+        (reducedMotion) => ({ reducedMotion }),
+      ),
+      range(
+        {
+          id: 'fov-input',
+          label: TEXTS.settings.fov,
+          min: CAMERA.fovMin,
+          max: CAMERA.fovMax,
+          step: 1,
+          unit: TEXTS.settings.fovUnit,
+        },
+        (s) => s.fov,
+        (fov) => ({ fov }),
+      ),
+      radios<Quality>(
+        TEXTS.settings.quality,
+        'quality',
+        TEXTS.settings.qualityOptions,
+        TEXTS.settings.qualityHint,
+        (s) => s.quality,
+        (quality) => ({ quality }),
+      ),
+      check(
+        TEXTS.settings.dynamicResolution,
+        TEXTS.settings.dynamicResolutionHint,
+        (s) => s.dynamicResolution,
+        (dynamicResolution) => ({ dynamicResolution }),
+      ),
+      radios<Settings['camera']>(
+        TEXTS.settings.camera,
+        'camera',
+        TEXTS.settings.cameraOptions,
+        TEXTS.settings.cameraHint,
+        (s) => s.camera,
+        (camera) => ({ camera }),
+      ),
+      check(
+        TEXTS.settings.showMetrics,
+        TEXTS.settings.showMetricsHint,
+        (s) => s.showMetrics,
+        (showMetrics) => ({ showMetrics }),
+      ),
+    ]);
+    const sound = this.panel('sound', [
+      check(
+        TEXTS.settings.mute,
+        TEXTS.settings.muteHint,
+        (s) => s.muted,
+        (muted) => ({ muted }),
+      ),
+      range(
+        { id: 'volume-input', label: TEXTS.settings.volume, ...VOLUME_RANGE },
+        (s) => s.volume,
+        (volume) => ({ volume }),
+      ),
+      check(
+        TEXTS.settings.music,
+        TEXTS.settings.musicHint,
+        (s) => s.music,
+        (music) => ({ music }),
+      ),
+      range(
+        { id: 'music-volume-input', label: TEXTS.settings.musicVolume, ...VOLUME_RANGE },
+        (s) => s.musicVolume,
+        (musicVolume) => ({ musicVolume }),
+      ),
+      range(
+        {
+          id: 'sfx-volume-input',
+          label: TEXTS.settings.sfxVolume,
+          hint: TEXTS.settings.sfxVolumeHint,
+          ...VOLUME_RANGE,
+        },
+        (s) => s.sfxVolume,
+        (sfxVolume) => ({ sfxVolume }),
+      ),
+    ]);
+    this.controls = new ControlsTab((controls) => change({ controls }));
+    this.syncers.push((s) => this.controls.sync(s.controls));
+    const controls = this.panel('controls', [this.controls.root]);
+    const driving = this.panel('driving', [
+      el('h3', { text: TEXTS.settings.assistsTitle }),
+      assist('steering', TEXTS.settings.steeringAssist, TEXTS.settings.steeringAssistHint),
+      assist('braking', TEXTS.settings.brakingAssist, TEXTS.settings.brakingAssistHint),
+      assist('autoRespawn', TEXTS.settings.autoRespawn, TEXTS.settings.autoRespawnHint),
+    ]);
+    const touchPanel = this.panel('touch', [
+      check(
+        TEXTS.settings.touchAutoThrottle,
+        TEXTS.settings.touchAutoThrottleHint,
+        (s) => s.touch.autoThrottle,
+        (autoThrottle) => touch({ autoThrottle }),
+      ),
+      check(
+        TEXTS.settings.touchLeftHanded,
+        TEXTS.settings.touchLeftHandedHint,
+        (s) => s.touch.leftHanded,
+        (leftHanded) => touch({ leftHanded }),
+      ),
+      radios<TouchSize>(
+        TEXTS.settings.touchSize,
+        'touch-size',
+        TEXTS.settings.touchSizes,
+        TEXTS.settings.touchSizeHint,
+        (s) => s.touch.size,
+        (size) => touch({ size }),
+      ),
+      range(
+        {
+          id: 'touch-opacity-input',
+          label: TEXTS.settings.touchOpacity,
+          hint: TEXTS.settings.touchOpacityHint,
+          min: TOUCH_OPACITY.min,
+          max: TOUCH_OPACITY.max,
+          step: TOUCH_OPACITY.step,
+          unit: TEXTS.settings.touchOpacityUnit,
+        },
+        (s) => s.touch.opacity,
+        (opacity) => touch({ opacity }),
+      ),
+    ]);
+
+    this.tabs = new Tabs('settings', TEXTS.settings.tabsLabel, [
+      { id: 'display', label: TEXTS.settings.tabs.display, panel: display },
+      { id: 'sound', label: TEXTS.settings.tabs.sound, panel: sound },
+      { id: 'controls', label: TEXTS.settings.tabs.controls, panel: controls },
+      { id: 'driving', label: TEXTS.settings.tabs.driving, panel: driving },
+      { id: 'touch', label: TEXTS.settings.tabs.touch, panel: touchPanel, className: 'only-touch' },
+    ]);
+    // Cada pestaña puede volver a sus valores de fábrica sin tocar las demás.
+    for (const [id, panel] of [
+      ['display', display],
+      ['sound', sound],
+      ['controls', controls],
+      ['driving', driving],
+      ['touch', touchPanel],
+    ] as const) {
+      panel.appendChild(
+        el('div', { className: 'tab-reset' }, [
+          button(TEXTS.settings.resetTab, () => this.resetTab(id, change), 'btn btn-small'),
+          el('small', { className: 'hint', text: TEXTS.settings.resetTabHint }),
+        ]),
+      );
+    }
+
+    const close = button('✕', onBack, 'btn btn-icon window-close');
+    close.setAttribute('aria-label', TEXTS.settings.close);
     this.root = el(
       'section',
-      { className: 'screen panel settings-panel', attrs: { 'aria-labelledby': 'settings-title' } },
+      {
+        className: 'screen panel window settings-panel',
+        attrs: { 'aria-labelledby': 'settings-title' },
+      },
       [
-        el('h2', { text: TEXTS.settings.title, attrs: { id: 'settings-title' } }),
-        reduced.root,
-        el('div', { className: 'range' }, [
-          el('label', { text: TEXTS.settings.fov, attrs: { for: 'fov-input' } }),
-          this.fov,
-          this.fovValue,
+        el('header', { className: 'window-header' }, [
+          el('h2', { text: TEXTS.settings.title, attrs: { id: 'settings-title' } }),
+          close,
         ]),
-        quality.root,
-        dynamic.root,
-        camera.root,
-        mute.root,
-        el('div', { className: 'range' }, [
-          el('label', { text: TEXTS.settings.volume, attrs: { for: 'volume-input' } }),
-          this.volume,
-          this.volumeValue,
+        el('div', { className: 'window-body' }, [this.tabs.root]),
+        el('footer', { className: 'window-footer' }, [
+          this.status,
+          el('small', { className: 'hint only-keys', text: TEXTS.settings.tabsHint }),
+          button(TEXTS.settings.back, onBack, 'btn btn-primary'),
         ]),
-        music.root,
-        el('fieldset', { className: 'assists' }, [
-          el('legend', { text: TEXTS.settings.assistsTitle }),
-          steering.root,
-          braking.root,
-          respawn.root,
-        ]),
-        el('fieldset', { className: 'assists only-touch' }, [
-          el('legend', { text: TEXTS.settings.touchTitle }),
-          touchAuto.root,
-          touchLeft.root,
-          touchSize.root,
-          el('div', { className: 'range' }, [
-            el('label', {
-              text: TEXTS.settings.touchOpacity,
-              attrs: { for: 'touch-opacity-input' },
-            }),
-            this.touchOpacity,
-            this.touchOpacityValue,
-          ]),
-          el('small', { className: 'hint', text: TEXTS.settings.touchOpacityHint }),
-        ]),
-        el('div', { className: 'actions' }, [this.backButton]),
       ],
     );
   }
 
+  /** Contenedor de una pestaña (lo que se desplaza dentro de la ventana). */
+  private panel(_id: TabId, children: readonly Node[]): HTMLElement {
+    return el('div', {}, children);
+  }
+
+  /** Vuelve a los valores de fábrica los ajustes de una pestaña. */
+  private resetTab(id: TabId, change: (patch: Partial<Settings>) => void): void {
+    const d = this.defaults();
+    const patches: Record<TabId, Partial<Settings>> = {
+      display: {
+        reducedMotion: d.reducedMotion,
+        fov: d.fov,
+        quality: d.quality,
+        dynamicResolution: d.dynamicResolution,
+        camera: d.camera,
+        showMetrics: d.showMetrics,
+      },
+      sound: {
+        muted: d.muted,
+        volume: d.volume,
+        music: d.music,
+        musicVolume: d.musicVolume,
+        sfxVolume: d.sfxVolume,
+      },
+      controls: { controls: d.controls },
+      driving: { assists: { ...d.assists } },
+      touch: { touch: { ...d.touch } },
+    };
+    change(patches[id]);
+    this.sync();
+    setText(this.status, TEXTS.settings.resetDone);
+  }
+
+  private sync(): void {
+    for (const syncer of this.syncers) syncer(this.current);
+  }
+
+  /** Pestaña siguiente o anterior (LB/RB del mando). */
+  stepTab(delta: 1 | -1): void {
+    this.tabs.step(delta, true);
+  }
+
   show(settings: Settings): void {
-    this.mute.checked = settings.muted;
-    this.reduced.checked = settings.reducedMotion;
-    this.fov.value = String(settings.fov);
-    setText(this.fovValue, `${settings.fov}${TEXTS.settings.fovUnit}`);
-    const q = this.quality.get(settings.quality);
-    if (q) q.checked = true;
-    this.dynamicResolution.checked = settings.dynamicResolution;
-    const c = this.camera.get(settings.camera);
-    if (c) c.checked = true;
-    this.volume.value = String(settings.volume);
-    setText(this.volumeValue, `${settings.volume}${TEXTS.settings.volumeUnit}`);
-    this.music.checked = settings.music;
-    this.assists = { ...settings.assists };
-    this.steering.checked = settings.assists.steering;
-    this.braking.checked = settings.assists.braking;
-    this.autoRespawn.checked = settings.assists.autoRespawn;
-    this.touch = { ...settings.touch };
-    this.touchAuto.checked = settings.touch.autoThrottle;
-    this.touchLeft.checked = settings.touch.leftHanded;
-    const size = this.touchSize.get(settings.touch.size);
-    if (size) size.checked = true;
-    this.touchOpacity.value = String(settings.touch.opacity);
-    setText(this.touchOpacityValue, `${settings.touch.opacity}${TEXTS.settings.touchOpacityUnit}`);
+    this.current = settings;
+    setText(this.status, '');
+    this.sync();
     setVisible(this.root, true);
-    this.backButton.focus({ preventScroll: true });
+    this.tabs.ensureVisibleSelection();
+    this.tabs.select(this.tabs.selected, true);
   }
 
   hide(): void {
+    this.controls.close();
     setVisible(this.root, false);
   }
 }

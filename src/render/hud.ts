@@ -5,6 +5,7 @@ import { el, setText, setVisible } from '../ui/dom';
 import { formatDelta, formatLapTime, formatSpeed } from '../ui/format';
 import { Minimap } from './minimap';
 import { stepsToMs } from '../game/race';
+import { actionKeysLabel, type KeyMap } from '../core/bindings';
 
 /**
  * HUD en DOM sobre el canvas: posición (en Carrera), vuelta, tiempos, velocidad, cuenta atrás, contramano,
@@ -29,6 +30,9 @@ export class Hud {
   private readonly lapMessage: HTMLElement;
   private readonly soundButton: HTMLButtonElement;
   private readonly soundLabel: HTMLElement;
+  /** Tecla del botón de sonido (se oculta con pantalla táctil) y pista de teclas: siguen las configuradas. */
+  private readonly soundKey = el('span', { className: 'only-keys' });
+  private readonly keysHint = el('div', { className: 'hud-panel hud-hint' });
   private lapMessageUntilStep = -1;
   private seenLaps = 0;
 
@@ -69,7 +73,7 @@ export class Hud {
     this.soundLabel = el('span');
     this.soundButton = el('button', { className: 'btn btn-small', attrs: { type: 'button' } }, [
       this.soundLabel,
-      el('span', { className: 'only-keys', text: TEXTS.hud.soundKey }),
+      this.soundKey,
     ]);
     this.soundButton.addEventListener('click', onToggleSound);
     // El botón no debe quedarse con el foco: el espacio lo pulsaría en vez de usar el freno de mano.
@@ -101,10 +105,7 @@ export class Hud {
         this.tunedNotice,
       ]),
       this.minimap.canvas,
-      el('div', { className: 'hud-top-right' }, [
-        this.soundButton,
-        el('div', { className: 'hud-panel hud-hint', text: TEXTS.hud.keysHint }),
-      ]),
+      el('div', { className: 'hud-top-right' }, [this.soundButton, this.keysHint]),
       speed,
       this.drift,
       el('div', { className: 'hud-center' }, [this.countdown, this.wrongWay, this.lapMessage]),
@@ -113,6 +114,19 @@ export class Hud {
     setVisible(this.lapMessage, false);
     setVisible(this.drift, false);
     setVisible(this.positionRow, false);
+  }
+
+  /** Muestra las teclas configuradas en el botón de sonido y en la pista de teclas. */
+  setKeys(map: KeyMap): void {
+    setText(this.soundKey, TEXTS.hud.soundKey(actionKeysLabel(map, 'mute')));
+    setText(
+      this.keysHint,
+      TEXTS.hud.keysHint(
+        actionKeysLabel(map, 'pause'),
+        actionKeysLabel(map, 'respawn'),
+        actionKeysLabel(map, 'camera'),
+      ),
+    );
   }
 
   setMuted(muted: boolean): void {

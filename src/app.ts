@@ -12,8 +12,17 @@ import { ChaseCamera } from './render/camera';
 import { Hud } from './render/hud';
 import { GameRenderer } from './render/scene';
 import { GhostStore } from './save/ghost-storage';
-import { SaveStore, browserStorage, defaultSave, type Settings } from './save/storage';
+import {
+  SaveStore,
+  browserStorage,
+  defaultSave,
+  type ControlSettings,
+  type Settings,
+} from './save/storage';
 import { DebugOverlay } from './ui/debug-overlay';
+import { applyMenuCommand } from './ui/menu-gamepad';
+import { MetricsOverlay } from './ui/metrics-overlay';
+import type { MenuCommand } from './core/menu-nav';
 import { el, setText, setVisible } from './ui/dom';
 import { MessageScreen } from './ui/message-screen';
 import { TouchControls } from './ui/touch-controls';
@@ -60,6 +69,12 @@ export class App {
   private hud: Hud | null = null;
   private menus: Menus | null = null;
   private debug: DebugOverlay | null = null;
+  /** Panel de métricas (F2 o Ajustes › Pantalla). */
+  private readonly metrics = new MetricsOverlay();
+  /** Controles aplicados a la entrada (solo se vuelven a aplicar si cambian: aplicarlos suelta las teclas). */
+  private appliedControls: ControlSettings | null = null;
+  /** Ajustes de fábrica de este dispositivo (para «Restaurar valores»). */
+  private readonly defaultSettings: () => Settings;
   /** Lo visual de la carrera (escena, coches, efectos, cámara y HUD de cada frame). */
   private readonly view = new RaceView();
   private readonly sound = new SoundEngine();
@@ -73,11 +88,23 @@ export class App {
   /** Reacción a las teclas y botones de un disparo (un solo objeto, sin crear funciones por frame). */
   private readonly handleAction = (action: Action, driving: boolean): void =>
     this.onAction(action, driving);
+  private readonly handleMenuCommand = (command: MenuCommand): void => this.onMenuCommand(command);
+  private readonly menuHooks = {
+    // B del mando hace lo mismo que Esc en los menús (volver, continuar, cerrar los ajustes).
+    onBack: (): void => this.onAction('pause', false),
+    onTab: (delta: 1 | -1): boolean => {
+      if (this.screen !== 'settings') return false;
+      this.menus?.settings.stepTab(delta);
+      return true;
+    },
+  };
 
   constructor(private readonly root: HTMLElement) {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const storage = browserStorage();
-    this.store = new SaveStore(storage, defaultSave(prefersReduced, TouchControls.prefersTouch()));
+    const prefersTouch = TouchControls.prefersTouch();
+    this.defaultSettings = () => defaultSave(prefersReduced, prefersTouch).settings;
+    this.store = new SaveStore(storage, defaultSave(prefersReduced, prefersTouch));
     this.recorder = new SessionRecorder(this.store, new GhostStore(storage), this.view);
     this.worlds = new WorldFactory(this.store);
     const first = this.worlds.initialSelection();
@@ -132,7 +159,9 @@ export class App {
         toMenu: () => this.toMenu(),
       },
       settings.reducedMotion,
+      this.defaultSettings,
     );
+    this.root.appendChild(this.metrics.root);
 
     if (parseDebugFlag(window.location.search)) {
       this.debug = new DebugOverlay(() => this.world);
@@ -142,6 +171,8 @@ export class App {
     attachBrowserEvents(this.gameElement, this.input.keyboard, {
       isDriving: () => this.screen === 'playing',
       onAction: this.handleAction,
+      onToggleMetrics: () =>
+        this.changeSettings({ showMetrics: !this.store.data.settings.showMetrics }),
       unlockAudio: () => this.sound.unlock(),
       onTouch: () => this.enableTouch(),
       onFocusLost: () => this.pause(true),
@@ -222,6 +253,9 @@ export class App {
     this.lastFrame = now;
     renderer.checkPixelRatio();
     this.input.pollGamepad(this.screen === 'playing', this.handleAction);
+    if (this.screen !== 'playing' && this.screen !== 'fatal') {
+      this.input.pollMenu(dt, this.handleMenuCommand);
+    }
     this.syncTouch();
 
     if (this.screen === 'playing' && !this.contextLost) {
@@ -246,7 +280,10 @@ export class App {
       this.screen === 'results',
       this.view.effects.playerImpact,
     );
-    this.debug?.update(now, dt, renderer.stats, effectiveRenderScale(this.store.data.settings));
+    const settings = this.store.data.settings;
+    const scale = effectiveRenderScale(settings);
+    this.metrics.update(now, dt, renderer.stats, scale, settings.quality);
+    this.debug?.update(now, dt, renderer.stats, scale);
   }
 
   /** Dibuja el frame; mientras se conduce se interpola entre pasos y se sigue dibujando cada frame. */
@@ -310,6 +347,12 @@ export class App {
 
   // ---------------------------------------------------------------------------------------------
   // Pantallas
+
+  /** Navegación de los menús con el mando. */
+  private onMenuCommand(command: MenuCommand): void {
+    const root = this.menus?.visibleRoot();
+    if (root) applyMenuCommand(root, command, this.menuHooks);
+  }
 
   private onAction(action: Action, driving: boolean): void {
     if (action === 'mute') {
@@ -456,9 +499,9 @@ export class App {
     this.menus?.settings.hide();
     this.screen = this.settingsReturn;
     if (this.settingsReturn === 'menu') {
-      this.menus?.start.show(this.store.data.settings.reducedMotion);
+      this.menus?.start.show(this.store.data.settings.reducedMotion, true);
     } else {
-      this.menus?.pause.show(false);
+      this.menus?.pause.show(false, true);
     }
   }
 
@@ -487,8 +530,17 @@ export class App {
     this.world.assists = { ...settings.assists };
     this.sound.setMuted(settings.muted);
     this.sound.setVolume(settings.volume);
+    this.sound.setBusVolumes(settings.musicVolume, settings.sfxVolume);
     this.sound.setMusic(settings.music);
     this.applyTouchSettings();
+    if (settings.controls !== this.appliedControls) {
+      this.appliedControls = settings.controls;
+      this.input.setControls(settings.controls);
+      this.hud?.setKeys(settings.controls.keys);
+      this.menus?.start.setKeys(settings.controls.keys);
+      this.menus?.pause.setKeys(settings.controls.keys);
+    }
+    this.metrics.setVisible(settings.showMetrics);
     document.documentElement.classList.toggle('reduced-motion', settings.reducedMotion);
     this.needsRender = true;
   }
